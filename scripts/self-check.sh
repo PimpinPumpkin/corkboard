@@ -11,13 +11,20 @@ APK="${1:?usage: self-check.sh <debug.apk> [out-dir]}"
 OUT="${2:-self-check-out}"
 mkdir -p "$OUT"
 adb install -r "$APK" >/dev/null || { echo "RESULT FAIL at install" | tee "$OUT/result.txt"; exit 1; }
-adb logcat -c
-adb shell am start -n app.corkboard/.MainActivity --ez self_check true >/dev/null
+# A freshly booted emulator often has no working network for its first half minute, which the app
+# reports as "blocked". That verdict is only believed after three tries, a little apart.
 RESULT=""
-for _ in $(seq 1 60); do
-  RESULT="$(adb logcat -d -s 'CorkboardSelfCheck:I' | grep -o 'RESULT .*' | tail -n1 || true)"
-  [ -n "$RESULT" ] && break
-  sleep 3
+for attempt in 1 2 3; do
+  adb shell am force-stop app.corkboard
+  adb logcat -c
+  adb shell am start -n app.corkboard/.MainActivity --ez self_check true >/dev/null
+  RESULT=""
+  for _ in $(seq 1 60); do
+    RESULT="$(adb logcat -d -s 'CorkboardSelfCheck:I' | grep -o 'RESULT .*' | tail -n1 || true)"
+    [ -n "$RESULT" ] && break
+    sleep 3
+  done
+  case "$RESULT" in "RESULT BLOCKED"*) echo "try $attempt: $RESULT"; sleep 25 ;; *) break ;; esac
 done
 adb logcat -d -s 'CorkboardSelfCheck:I' 'CorkboardHttp:D' 'AndroidRuntime:E' > "$OUT/log.txt" 2>/dev/null || true
 adb exec-out screencap -p > "$OUT/screen.png" 2>/dev/null || true
