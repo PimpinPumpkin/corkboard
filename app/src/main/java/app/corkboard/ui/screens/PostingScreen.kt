@@ -133,7 +133,7 @@ private fun openInBrowser(context: Context, url: String) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, onBack: () -> Unit) {
+fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, onBack: () -> Unit, onOpen: (Listing) -> Unit = {}) {
     val context = LocalContext.current
     val favorites by store.favorites.collectAsStateWithLifecycle()
     var posting by remember { mutableStateOf<Posting?>(null) }
@@ -178,7 +178,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
             val seen = opened.copy(postingId = fresh.postingId, postedAt = fresh.postedAt, title = fresh.title, priceText = fresh.priceText, imageIds = fresh.imageIds, place = fresh.place, lat = fresh.lat, lon = fresh.lon)
             store.addRecent(seen)
             store.setStatus(fresh.postingId, ListingStatus(priceNow = fresh.priceText, priceWas = snapshot?.priceWas?.takeIf { it != fresh.priceText }, checkedAt = System.currentTimeMillis() / 1000))
-            // The same thing posted again: bring the heart, note and lists over from the old one.
+            // The same thing posted again: keep it beside the old one the user saved, and link the two.
             fresh.repostOf?.let { old ->
                 store.carryOver(old, opened.copy(postingId = fresh.postingId, postedAt = fresh.postedAt, title = fresh.title, priceText = fresh.priceText, imageIds = fresh.imageIds, place = fresh.place, lat = fresh.lat, lon = fresh.lon))
             }
@@ -277,20 +277,32 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                     modifier = Modifier.padding(start = 12.dp),
                 )
             }
-            // A repost that took over something the user had saved: say so, because the listing the
-            // site itself still shows in their saved items there is the old, deleted one.
+            // A listing and its repost point at each other. The site only ever shows the newest; here
+            // the old one stays, so what the seller changed between the two can be seen.
             val replaced by store.replaced.collectAsStateWithLifecycle()
-            if (!gone && replaced[listing.postingId] != null) Row(
+            val olderId = replaced[listing.postingId]
+            val newerId = replaced.entries.firstOrNull { it.value == listing.postingId }?.key
+            val older = olderId?.let { store.known(it) }
+            val newer = newerId?.let { store.known(it) }
+            if (older != null || newer != null) Column(
                 Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Autorenew, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                Text(
-                    "The seller deleted the listing you saved and posted it again. This is the new one; your heart, note and lists moved to it.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(start = 12.dp),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Autorenew, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Text(
+                        if (older != null) {
+                            // What the earlier one asked, when it differs: the first thing worth knowing.
+                            val then = older.priceText?.takeIf { it != price }
+                            "The seller posted this again. You saved the earlier listing, which is kept too." + if (then != null) " It asked $then." else ""
+                        } else "The seller has posted this again as a new listing.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
+                }
+                TextButton(onClick = { onOpen(older ?: newer!!) }, modifier = Modifier.align(Alignment.End)) {
+                    Text(if (older != null) "See the earlier listing" else "See the new listing")
+                }
             }
             if (imageIds.isNotEmpty()) Gallery(imageIds, photo = { i -> opened.uuid?.let { archive.photo(it, i) } }, onOpen = { viewer = it })
             Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {

@@ -40,7 +40,9 @@ See README.md for what it does and how it talks to the site.
   so a border search fetches several batches to fill a screen. Odometer units are per listing.
 - **The archive** (`data/Archive.kt`) keeps the raw response of every listing opened (newest 400) and,
   for kept listings, their photos, fetched one at a time. A 404 from `rapi/postings` means gone;
-  the listing screen then shows the saved copy. `repostOf` in a listing names the posting it replaces.
+  the listing screen then shows the saved copy. `repostOf` in a listing names the posting it replaces;
+  that link comes from craigslist, the app does no matching of its own. A repost of something the user
+  kept is added beside the old one, never in place of it.
 - **One request leaves craigslist's hosts:** `calibration.json` from this repository, once a day
   (`data/Calibration.kt`). It can retune the API version, batch sizes and row tags and show a notice;
   it cannot change hosts, and the app only accepts it signed. To ship a fix without an app update:

@@ -286,34 +286,41 @@ class Store(context: Context) {
         (_favorites.value + _noted.value + _lists.value.flatMap { it.items }).mapNotNull { it.uuid }.toSet()
 
     /**
-     * A seller who posts the same thing again gets a new listing that names the old one. Whatever
-     * the user attached to the old one (a heart, a note, a place in a list) moves to the new one.
+     * A seller who posts the same thing again gets a new listing that names the old one. If the
+     * old one was something the user kept, the new one is kept beside it, in the same places, and
+     * the two are linked. The old one is never replaced: the seller may have changed the price or
+     * the wording, and the saved copy of the old listing is the only record of what it said.
      */
     fun carryOver(oldId: Long, new: Listing) {
         if (oldId == new.postingId) return
         val had = _favorites.value.any { it.postingId == oldId } || _lists.value.any { l -> l.items.any { it.postingId == oldId } } ||
             _notes.value[oldId] != null || oldId in _hidden.value
-        if (had) {
-            // Remembered, so the new listing can always say which saved one it took the place of.
+        if (!had) return
+        if (_replaced.value[new.postingId] != oldId) {
             val next = (_replaced.value + (new.postingId to oldId)).entries.sortedByDescending { it.key }.take(300).associate { it.key to it.value }
             write("replaced.json", replacedSerializer, next)
             _replaced.value = next
         }
-        if (_favorites.value.any { it.postingId == oldId }) {
-            val next = _favorites.value.filter { it.postingId != new.postingId }.map { if (it.postingId == oldId) new else it }
-            write("favorites.json", ListSerializer(Listing.serializer()), next)
-            _favorites.value = next
+        // The new one goes in directly above the old one, wherever the old one is.
+        fun beside(items: List<Listing>): List<Listing> =
+            if (items.none { it.postingId == oldId } || items.any { it.postingId == new.postingId }) items
+            else items.flatMap { if (it.postingId == oldId) listOf(new, it) else listOf(it) }
+        val favorites = beside(_favorites.value)
+        if (favorites !== _favorites.value) {
+            write("favorites.json", ListSerializer(Listing.serializer()), favorites)
+            _favorites.value = favorites
+            onKept?.invoke(new)
         }
-        if (_lists.value.any { l -> l.items.any { it.postingId == oldId } }) {
-            setLists(_lists.value.map { l -> l.copy(items = l.items.filter { it.postingId != new.postingId }.map { if (it.postingId == oldId) new else it }) })
-        }
+        if (_lists.value.any { l -> beside(l.items) !== l.items }) setLists(_lists.value.map { l -> l.copy(items = beside(l.items)) })
+        // The note is copied, not moved: it was written about the old listing and stays with it too.
         val note = _notes.value[oldId]
-        if (note != null) {
-            if (_notes.value[new.postingId] == null) setNote(new, note)
-            setNote(Listing(postingId = oldId, postedAt = 0, categoryId = 0), "")
-        }
+        if (note != null && _notes.value[new.postingId] == null) setNote(new, note)
         if (oldId in _hidden.value) setHidden(new.postingId, true)
     }
+
+    /** A listing the user has kept or opened, by posting id: for jumping between a listing and its repost. */
+    fun known(postingId: Long): Listing? =
+        (_favorites.value + _lists.value.flatMap { it.items } + _noted.value + _recent.value).firstOrNull { it.postingId == postingId }
 
     private val replacedSerializer = kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.serializer<Long>(), kotlinx.serialization.serializer<Long>())
     private val _replaced = MutableStateFlow(read("replaced.json", replacedSerializer).orEmpty())

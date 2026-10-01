@@ -186,7 +186,7 @@ class MainActivity : ComponentActivity() {
                             Screen.Saved -> SavedScreen(app.store, onBack = ::pop, onOpen = ::open)
                             Screen.Settings -> SettingsScreen(app.store, app.http, onBack = ::pop)
                             is Screen.Results -> ResultsScreen(screen.state, app.api, app.store, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
-                            is Screen.Posting -> PostingScreen(screen.listing, app.api, app.store, app.archive, onBack = ::pop)
+                            is Screen.Posting -> PostingScreen(screen.listing, app.api, app.store, app.archive, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
                         }
                     }
                 }
