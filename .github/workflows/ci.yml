@@ -94,8 +94,17 @@ jobs:
             echo "No keystore secret: the release APK will be debug-signed."
           fi
 
-      # No step fetches Cronet: app/build.gradle.kts downloads the pinned AAR the first time Gradle
-      # configures the project, here exactly as on a fresh clone.
+      - name: Fetch the Cronet runtime
+        # From this repository's own release when it is there (the cronet workflow publishes the
+        # versions it packs). Signed in, because an anonymous download fails while the repository
+        # is private; without it the build falls back to public sources by itself.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="$(sed -n 's/^corkboard.cronetVersion=//p' gradle.properties)"
+          mkdir -p app/libs
+          gh release download cronet-runtime -p "cronet-$v.aar" -D app/libs 2>/dev/null || echo "Not on this repository's release; the build will look elsewhere."
+
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --no-daemon
 
