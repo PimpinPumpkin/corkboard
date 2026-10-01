@@ -134,8 +134,8 @@ update.
   you keep have their photos saved too. When the seller deletes it, you still have what it said.
 - **Reposts keep their history.** When the same thing is posted again, your heart, note and lists
   move to the new listing.
-- **Saved searches with alerts.** The phone checks a few times a day and tells you what is new.
-  No push service, no account.
+- **Saved searches with alerts.** The phone checks about every three hours and tells you what is
+  new. No push service, no account. See [the small print](#alerts-the-small-print).
 
 ### The rest
 
@@ -144,6 +144,24 @@ update.
 
 Replying to a listing, posting, and account pages open in your browser. Those sit behind
 craigslist's own checks, and that is where they belong.
+
+### Alerts, the small print
+
+Alerts are checked by the phone itself, the way a de-Googled alarm or reminder app has to work:
+there is no server watching craigslist for you and no push message to wake the app.
+
+- **Android decides when the check runs.** By default it may delay or skip background work to save
+  battery, sometimes for many hours. For alerts you can rely on, open the app's page in system
+  settings and set **App battery usage** to **Unrestricted**. The saved searches screen has a
+  button that takes you there.
+- **Still not instant.** Checks are about three hours apart on purpose, and can be later while the
+  phone sits idle or battery saver is on. Something that sells in twenty minutes will be gone.
+- **Needs a network** at the time of the check, and notification permission.
+- **Some phones are stricter.** Makers that kill background apps aggressively may need the app
+  allowed to run in the background as well; [dontkillmyapp.com](https://dontkillmyapp.com) lists
+  what each one needs.
+- **Light on the battery.** One small request per saved search per check, no constant connection,
+  and nothing at all when no search has alerts on.
 
 ## Privacy
 

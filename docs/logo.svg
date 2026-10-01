@@ -1,12 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="240" height="240">
   <rect width="108" height="108" rx="26" fill="#C99A6B"/>
-  <g transform="rotate(-6 54 54)">
-    <rect x="32" y="37" width="48" height="46" rx="3" fill="#000" opacity="0.2"/>
-    <rect x="31" y="35" width="48" height="46" rx="3" fill="#FFFDF7"/>
-    <rect x="39" y="52" width="32" height="3" fill="#C9BBA8"/>
-    <rect x="39" y="60" width="32" height="3" fill="#C9BBA8"/>
-    <rect x="39" y="68" width="20" height="3" fill="#C9BBA8"/>
+  <g transform="rotate(30 54 54)">
+    <g transform="translate(29 29.4) scale(2.3)"><path fill="#000" opacity="0.2" d="M16,9V4h1c0.55,0 1,-0.45 1,-1s-0.45,-1 -1,-1H7C6.45,2 6,2.45 6,3s0.45,1 1,1h1v5c0,1.66 -1.34,3 -3,3v2h5.97v7l1,1 1,-1v-7H19v-2c-1.66,0 -3,-1.34 -3,-3z"/></g>
+    <g transform="translate(26.4 26.4) scale(2.3)">
+      <path fill="#B3261E" d="M16,9V4h1c0.55,0 1,-0.45 1,-1s-0.45,-1 -1,-1H7C6.45,2 6,2.45 6,3s0.45,1 1,1h1v5c0,1.66 -1.34,3 -3,3v2h5.97v7l1,1 1,-1v-7H19v-2c-1.66,0 -3,-1.34 -3,-3z"/>
+      <path fill="#F4EFEA" d="M10.97,14v7l1,1 1,-1v-7z"/>
+      <path fill="#E46962" d="M9.2,4h1.6v5.4c0,0.9 -0.3,1.8 -0.8,2.6h-1.9c0.7,-0.8 1.1,-1.8 1.1,-3z"/>
+    </g>
   </g>
-  <circle cx="54" cy="31" r="7" fill="#B3261E"/>
-  <circle cx="52" cy="29" r="2" fill="#F2B8B5"/>
 </svg>

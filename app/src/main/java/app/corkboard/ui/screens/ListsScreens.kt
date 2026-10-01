@@ -1,6 +1,10 @@
 package app.corkboard.ui.screens
 
 import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -242,6 +246,7 @@ fun SavedScreen(store: Store, onBack: () -> Unit, onOpen: (SearchQuery) -> Unit)
     val context = LocalContext.current
     ListScaffold("Saved searches", onBack, if (saved.isEmpty()) "Tap the bookmark on any search to save it and hear about new listings." else null) { pad ->
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding() + 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (saved.any { it.alerts }) item { AlertsNote() }
             items(saved, key = { it.id }) { s ->
                 SavedRow(
                     s,
@@ -278,5 +283,40 @@ private fun SavedRow(s: SavedSearch, onOpen: () -> Unit, onAlerts: () -> Unit, o
             Icon(if (s.alerts) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff, if (s.alerts) "Turn alerts off" else "Turn alerts on")
         }
         IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, "Delete saved search") }
+    }
+}
+
+/**
+ * The honest small print about alerts, the same caveat any alarm or reminder app without a push
+ * service has to give: the phone decides when background work runs, and battery optimization lets
+ * it put that off for hours.
+ */
+@Composable
+private fun AlertsNote() {
+    val context = LocalContext.current
+    val power = remember { context.getSystemService(PowerManager::class.java) }
+    // Read again every time the screen comes back, so returning from system settings updates it.
+    var unrestricted by remember { mutableStateOf(power?.isIgnoringBatteryOptimizations(context.packageName) == true) }
+    LifecycleResumeEffect(Unit) {
+        unrestricted = power?.isIgnoringBatteryOptimizations(context.packageName) == true
+        onPauseOrDispose {}
+    }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(20.dp)) {
+        Text("About alerts", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        Text(
+            "Corkboard checks saved searches itself, about every three hours, with no push service. " +
+                if (unrestricted) "Battery use is unrestricted, so checks should run on time. Android can still hold them back while the phone sits idle or battery saver is on."
+                else "Android may delay or skip the checks to save battery, sometimes for many hours. For alerts you can rely on, set battery use for Corkboard to Unrestricted. They can still be late while the phone sits idle or battery saver is on.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        if (!unrestricted) FilledTonalButton(
+            onClick = {
+                // The app's own page in system settings, where "App battery usage" lives on every Android.
+                runCatching { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))) }
+            },
+            modifier = Modifier.padding(top = 12.dp),
+        ) { Text("Open battery settings") }
     }
 }

@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- A push pin, tilted the way one sits in a corkboard, with its shadow on the cork. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group android:pivotX="54" android:pivotY="54" android:rotation="-6">
-        <path android:fillColor="#33000000" android:pathData="M35,37h42a3,3 0,0 1,3 3v40a3,3 0,0 1,-3 3h-42a3,3 0,0 1,-3 -3v-40a3,3 0,0 1,3 -3z" />
-        <path android:fillColor="#FFFDF7" android:pathData="M34,35h42a3,3 0,0 1,3 3v40a3,3 0,0 1,-3 3h-42a3,3 0,0 1,-3 -3v-40a3,3 0,0 1,3 -3z" />
-        <path android:fillColor="#C9BBA8" android:pathData="M39,52h32v3h-32z M39,60h32v3h-32z M39,68h20v3h-20z" />
+    <group android:pivotX="54" android:pivotY="54" android:rotation="30">
+        <group android:scaleX="2.3" android:scaleY="2.3" android:translateX="29" android:translateY="29.4">
+            <path android:fillColor="#33000000" android:pathData="M16,9V4h1c0.55,0 1,-0.45 1,-1s-0.45,-1 -1,-1H7C6.45,2 6,2.45 6,3s0.45,1 1,1h1v5c0,1.66 -1.34,3 -3,3v2h5.97v7l1,1 1,-1v-7H19v-2c-1.66,0 -3,-1.34 -3,-3z" />
+        </group>
+        <group android:scaleX="2.3" android:scaleY="2.3" android:translateX="26.4" android:translateY="26.4">
+            <path android:fillColor="#B3261E" android:pathData="M16,9V4h1c0.55,0 1,-0.45 1,-1s-0.45,-1 -1,-1H7C6.45,2 6,2.45 6,3s0.45,1 1,1h1v5c0,1.66 -1.34,3 -3,3v2h5.97v7l1,1 1,-1v-7H19v-2c-1.66,0 -3,-1.34 -3,-3z" />
+            <!-- The steel point below the head. -->
+            <path android:fillColor="#F4EFEA" android:pathData="M10.97,14v7l1,1 1,-1v-7z" />
+            <!-- A highlight down the barrel. -->
+            <path android:fillColor="#E46962" android:pathData="M9.2,4h1.6v5.4c0,0.9 -0.3,1.8 -0.8,2.6h-1.9c0.7,-0.8 1.1,-1.8 1.1,-3z" />
+        </group>
     </group>
-    <path android:fillColor="#B3261E" android:pathData="M54,31m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
-    <path android:fillColor="#F2B8B5" android:pathData="M52,29m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
 </vector>
