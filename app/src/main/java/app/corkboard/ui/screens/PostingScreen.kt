@@ -95,6 +95,7 @@ import app.corkboard.data.Store
 import app.corkboard.ui.Format
 import app.corkboard.ui.components.MiniMap
 import app.corkboard.ui.components.Panel
+import app.corkboard.ui.components.RefreshBox
 import app.corkboard.ui.theme.PriceFont
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
@@ -116,7 +117,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.launch
@@ -245,7 +245,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
         },
     ) { pad ->
         // Pulling down asks the site for the listing again, past the five minutes a copy may be reused.
-        PullToRefreshBox(isRefreshing = refreshing, onRefresh = { refreshing = true; attempt++ }, modifier = Modifier.fillMaxSize().padding(pad)) {
+        RefreshBox(isRefreshing = refreshing, onRefresh = { refreshing = true; attempt++ }, modifier = Modifier.fillMaxSize().padding(pad)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             if (gone || offline) Row(
                 Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (gone) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh).clickable(enabled = offline) { attempt++ }.padding(16.dp),
@@ -424,37 +424,17 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, photo: (Int) -> File
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val pager = rememberPagerState(initialPage = start) { imageIds.size }
         var zoomed by remember { mutableStateOf(false) }
-        // Dragging down pulls the photo away under the finger and lets go of it: far enough or fast
-        // enough and it flies off and the viewer closes, otherwise it springs back.
-        val scope = rememberCoroutineScope()
-        val drag = remember { Animatable(0f) }
-        var height by remember { mutableIntStateOf(1) }
-        val away = (kotlin.math.abs(drag.value) / (height * 0.5f)).coerceIn(0f, 1f)
-        Box(
-            Modifier.fillMaxSize().onSizeChanged { height = it.height.coerceAtLeast(1) }.background(Color.Black.copy(alpha = 1f - 0.85f * away))
-                .draggable(
-                    state = rememberDraggableState { delta -> scope.launch { drag.snapTo(drag.value + delta) } },
-                    orientation = Orientation.Vertical,
-                    enabled = !zoomed,
-                    onDragStopped = { velocity ->
-                        val leave = kotlin.math.abs(drag.value) > height * 0.18f || kotlin.math.abs(velocity) > 1800f
-                        if (leave) {
-                            // Keeps the speed it was thrown with on the way out.
-                            val target = if (drag.value + velocity * 0.1f >= 0) height.toFloat() else -height.toFloat()
-                            drag.animateTo(target, spring(dampingRatio = 1f, stiffness = 300f), initialVelocity = velocity)
-                            onClose()
-                        } else {
-                            drag.animateTo(0f, spring(dampingRatio = 0.7f, stiffness = 400f), initialVelocity = velocity)
-                        }
-                    },
-                ),
-        ) {
-            // While a photo is zoomed in, dragging pans it instead of turning the page.
-            HorizontalPager(pager, Modifier.fillMaxSize().graphicsLayer { translationY = drag.value; val k = 1f - 0.12f * away; scaleX = k; scaleY = k }, userScrollEnabled = !zoomed) { i ->
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            HorizontalPager(pager, Modifier.fillMaxSize(), userScrollEnabled = !zoomed) { i ->
+                // One gesture loop, so pinch to zoom, panning a zoomed photo, swiping down to close
+                // and the pager's own sideways swipe all work together: a pinch or a pan while
+                // zoomed takes the pointers, a clearly downward drag at full size drags the photo
+                // toward closing, and a sideways drag is left alone for the pager.
                 var scale by remember { mutableFloatStateOf(1f) }
                 var offset by remember { mutableStateOf(Offset.Zero) }
+                var dismissY by remember { mutableFloatStateOf(0f) }
                 LaunchedEffect(pager.currentPage) {
-                    if (pager.currentPage != i) { scale = 1f; offset = Offset.Zero }
+                    if (pager.currentPage != i) { scale = 1f; offset = Offset.Zero; dismissY = 0f }
                 }
                 AsyncImage(
                     model = remember(i) { photo(i) } ?: Images.url(imageIds[i], Images.LARGE),
@@ -462,6 +442,18 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, photo: (Int) -> File
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onDoubleTap = { pos ->
+                                if (scale > 1f) {
+                                    scale = 1f; offset = Offset.Zero
+                                } else {
+                                    // Zooms in on the spot that was tapped.
+                                    scale = 2.5f
+                                    offset = (Offset(size.width / 2f, size.height / 2f) - pos) * (2.5f - 1f)
+                                }
+                                zoomed = scale > 1f
+                            })
+                        }
                         .pointerInput(Unit) {
                             // Panning stops at the photo's edges, so it can never be dragged out of sight.
                             fun clamp(o: Offset): Offset {
@@ -471,30 +463,41 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, photo: (Int) -> File
                             }
                             awaitEachGesture {
                                 awaitFirstDown(requireUnconsumed = false)
+                                var dx = 0f
+                                var dy = 0f
                                 do {
                                     val event = awaitPointerEvent()
-                                    // Two fingers always zoom. One finger pans a zoomed photo and is
-                                    // otherwise left alone, so the pager underneath can turn the page.
-                                    if (event.changes.count { it.pressed } > 1 || scale > 1f) {
-                                        scale = (scale * event.calculateZoom()).coerceIn(1f, 5f)
-                                        offset = if (scale == 1f) Offset.Zero else clamp(offset + event.calculatePan())
-                                        zoomed = scale > 1f
-                                        event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                    val zoom = event.calculateZoom()
+                                    val pan = event.calculatePan()
+                                    dx += pan.x; dy += pan.y
+                                    when {
+                                        zoom != 1f || scale > 1f -> {
+                                            scale = (scale * zoom).coerceIn(1f, 5f)
+                                            offset = if (scale > 1f) clamp(offset + pan) else Offset.Zero
+                                            dismissY = 0f
+                                            zoomed = scale > 1f
+                                            event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                        }
+                                        dy > 0f && dy > kotlin.math.abs(dx) -> {
+                                            dismissY = dy
+                                            event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                        }
                                     }
                                 } while (event.changes.any { it.pressed })
+                                if (scale <= 1f) {
+                                    if (dismissY > 240f) onClose()
+                                    dismissY = 0f
+                                }
                             }
                         }
-                        .pointerInput(Unit) {
-                            detectTapGestures(onDoubleTap = {
-                                scale = if (scale > 1f) 1f else 2.5f
-                                offset = Offset.Zero
-                                zoomed = scale > 1f
-                            })
-                        }
-                        .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
+                        .graphicsLayer {
+                            scaleX = scale; scaleY = scale
+                            translationX = offset.x; translationY = offset.y + dismissY
+                            alpha = (1f - dismissY / 1000f).coerceIn(0.4f, 1f)
+                        },
                 )
             }
-            IconButton(onClick = onClose, modifier = Modifier.graphicsLayer { alpha = 1f - away }.statusBarsPadding().padding(8.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))) {
+            IconButton(onClick = onClose, modifier = Modifier.statusBarsPadding().padding(8.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))) {
                 Icon(Icons.Outlined.Close, "Close", tint = Color.White)
             }
             Text(
@@ -509,12 +512,23 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, photo: (Int) -> File
 /** Which of the user's lists this listing is in, with a way to start a new one. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ListPicker(listing: Listing, store: Store, onDismiss: () -> Unit) {
+internal fun ListPicker(listing: Listing, store: Store, onDismiss: () -> Unit) {
     val lists by store.lists.collectAsStateWithLifecycle()
+    val favorites by store.favorites.collectAsStateWithLifecycle()
     var name by remember { mutableStateOf("") }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding()) {
-            Text("Add to a list", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+            Text("Lists", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                "A listing can be in as many lists as you like. Check the ones it belongs in.",
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp),
+            )
+            val isFavorite = favorites.any { it.postingId == listing.postingId }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { store.toggleFavorite(listing) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = isFavorite, onCheckedChange = { store.toggleFavorite(listing) })
+                Text("Favorites", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text("${favorites.size}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             lists.forEach { l ->
                 val inList = l.items.any { it.postingId == listing.postingId }
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { store.toggleInList(l.id, listing) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {

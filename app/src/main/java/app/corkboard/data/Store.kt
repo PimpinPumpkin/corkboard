@@ -13,7 +13,8 @@ import java.io.File
 data class SavedSearch(
     val id: Long,
     val query: SearchQuery,
-    val alerts: Boolean = true,
+    /** Whether the phone checks this search in the background. Off unless the user turns it on. */
+    val alerts: Boolean = false,
     /** The newest posting id already seen for this search; anything above it is new. */
     val newestSeen: Long = 0,
     val unseen: Int = 0,
@@ -341,9 +342,9 @@ class Store(context: Context) {
 
     fun findSaved(query: SearchQuery): SavedSearch? = _saved.value.firstOrNull { it.query == query }
 
-    fun save(query: SearchQuery, newestSeen: Long): SavedSearch {
+    fun save(query: SearchQuery, newestSeen: Long, name: String? = null, alerts: Boolean = false): SavedSearch {
         findSaved(query)?.let { return it }
-        val s = SavedSearch(id = System.currentTimeMillis(), query = query, newestSeen = newestSeen)
+        val s = SavedSearch(id = System.currentTimeMillis(), query = query, newestSeen = newestSeen, name = name?.trim()?.ifEmpty { null }, alerts = alerts)
         setSaved(listOf(s) + _saved.value)
         return s
     }

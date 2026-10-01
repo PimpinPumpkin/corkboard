@@ -14,6 +14,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import app.corkboard.data.SearchQuery
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import app.corkboard.data.Units
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -58,7 +62,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarHostState
@@ -90,6 +93,7 @@ import app.corkboard.ui.ResultsState
 import app.corkboard.ui.components.ListingRow
 import app.corkboard.ui.components.ListingTile
 import app.corkboard.ui.components.SearchPill
+import app.corkboard.ui.components.RefreshBox
 import app.corkboard.ui.components.SoftField
 import app.corkboard.work.Alerts
 import kotlinx.coroutines.launch
@@ -113,6 +117,7 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
     var text by rememberSaveable(query.text) { mutableStateOf(query.text) }
     var showFilters by remember { mutableStateOf(false) }
     var showPlace by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
     val units = page?.units ?: Units()
     val focus = LocalFocusManager.current
     val snackbar = remember { SnackbarHostState() }
@@ -181,10 +186,7 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
                                 store.removeSaved(existing.id)
                                 scope.launch { snackbar.showSnackbar("Search removed") }
                             } else {
-                                store.save(query, newestSeen = state.page?.items?.maxOfOrNull { it.postingId } ?: 0)
-                                Alerts.schedule(context)
-                                if (Build.VERSION.SDK_INT >= 33) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                scope.launch { snackbar.showSnackbar("Search saved. You will be told about new listings.") }
+                                saving = true
                             }
                         }) {
                             Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, if (isSaved) "Remove saved search" else "Save this search")
@@ -247,7 +249,7 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
             items.isEmpty() && state.hasMore -> Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             items.isEmpty() -> Message(pad, if (foreignHidden) "Nothing found in this country. Listings from other countries are hidden." else "Nothing found. Try fewer filters or a wider area.") {}
             // Pulling down asks the site again, past the fifteen minutes it lets results be reused.
-            else -> PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = state::refresh, modifier = Modifier.fillMaxSize().padding(top = pad.calculateTopPadding())) {
+            else -> RefreshBox(isRefreshing = state.refreshing, onRefresh = state::refresh, modifier = Modifier.fillMaxSize().padding(top = pad.calculateTopPadding())) {
             LazyVerticalGrid(
                 columns = if (grid) GridCells.Adaptive(160.dp) else GridCells.Fixed(1),
                 state = gridState,
@@ -275,9 +277,59 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
         FilterSheet(page.filters, query, api, onApply = { showFilters = false; state.run(it) }, onDismiss = { showFilters = false })
     }
 
+    if (saving) {
+        SaveSearchDialog(
+            suggested = query.text.ifEmpty { query.categoryName },
+            onDismiss = { saving = false },
+            onSave = { name, alerts ->
+                saving = false
+                store.save(query, newestSeen = state.page?.items?.maxOfOrNull { it.postingId } ?: 0, name = name.takeIf { it != query.text.ifEmpty { query.categoryName } }, alerts = alerts)
+                if (alerts) {
+                    Alerts.schedule(context)
+                    if (Build.VERSION.SDK_INT >= 33) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                scope.launch { snackbar.showSnackbar(if (alerts) "Search saved, with alerts." else "Search saved.") }
+            },
+        )
+    }
+
     if (showPlace && page != null) {
         PlaceDialog(query, page.subareas, page.units.distance, homeOnly, store::setHomeCountryOnly, onApply = { showPlace = false; state.run(it) }, onDismiss = { showPlace = false })
     }
+}
+
+/** Saving a search: what to call it, and whether the phone should watch it. Alerts start off. */
+@Composable
+private fun SaveSearchDialog(suggested: String, onDismiss: () -> Unit, onSave: (String, Boolean) -> Unit) {
+    // Opens with the suggested name selected and the keyboard up, so typing replaces it outright.
+    var name by remember { mutableStateOf(TextFieldValue(suggested, TextRange(0, suggested.length))) }
+    var alerts by remember { mutableStateOf(false) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Save this search") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.copy(text = it.text.take(60)) },
+                    singleLine = true,
+                    label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                )
+                Row(Modifier.fillMaxWidth().padding(top = 16.dp).clickable { alerts = !alerts }, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Alert me about new listings", style = MaterialTheme.typography.bodyLarge)
+                        Text("Checked by the phone about every three hours.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = alerts, onCheckedChange = { alerts = it })
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(name.text.trim().ifEmpty { suggested }, alerts) }) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 /**

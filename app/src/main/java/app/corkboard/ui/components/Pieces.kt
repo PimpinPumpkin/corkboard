@@ -23,6 +23,8 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -121,5 +123,43 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier, action: @Composabl
 fun TonalIcon(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface) {
     Box(modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
         IconButton(onClick = onClick) { Icon(icon, label, tint = tint) }
+    }
+}
+
+/**
+ * Pull down to reload, with the two cues that make it feel like it did something: a tick under
+ * the finger at the point where letting go will reload, and a brief wash of light over the
+ * content when the new answer lands.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun RefreshBox(isRefreshing: Boolean, onRefresh: () -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val state = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
+    val view = androidx.compose.ui.platform.LocalView.current
+    // The detent: felt once each time the pull crosses the point of no return, in either direction.
+    val armed = state.distanceFraction >= 1f
+    androidx.compose.runtime.LaunchedEffect(armed) {
+        if (armed || state.distanceFraction > 0.5f) {
+            view.performHapticFeedback(
+                if (android.os.Build.VERSION.SDK_INT >= 34) {
+                    if (armed) android.view.HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE else android.view.HapticFeedbackConstants.GESTURE_THRESHOLD_DEACTIVATE
+                } else android.view.HapticFeedbackConstants.CLOCK_TICK,
+            )
+        }
+    }
+    // The flash: only when a reload finishes, never on first appearance.
+    val flash = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    var wasRefreshing by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(isRefreshing) {
+        if (wasRefreshing && !isRefreshing) {
+            view.performHapticFeedback(if (android.os.Build.VERSION.SDK_INT >= 30) android.view.HapticFeedbackConstants.CONFIRM else android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+            flash.snapTo(0.22f)
+            flash.animateTo(0f, androidx.compose.animation.core.tween(450))
+        }
+        wasRefreshing = isRefreshing
+    }
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = modifier, state = state) {
+        content()
+        if (flash.value > 0f) Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.primary.copy(alpha = flash.value)))
     }
 }

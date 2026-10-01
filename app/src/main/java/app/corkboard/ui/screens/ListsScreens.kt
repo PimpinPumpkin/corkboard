@@ -1,6 +1,8 @@
 package app.corkboard.ui.screens
 
+import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
@@ -222,6 +224,8 @@ fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing
     var menu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
+    var moving by remember { mutableStateOf<Listing?>(null) }
+    moving?.let { l -> ListPicker(l, store, onDismiss = { moving = null }) }
     val saveCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(Export.csv(items, notes).toByteArray()) } }
     }
@@ -261,12 +265,19 @@ fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing
                 )
             }
         } else LazyColumn(contentPadding = pad) {
+            item {
+                Text(
+                    "Press and hold a listing to put it in other lists or take it out of this one.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                )
+            }
             items(items, key = { it.postingId }) { l ->
                 ListingRow(
                     l, favorite = l.postingId in favoriteIds, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) },
                     note = notes[l.postingId], modifier = Modifier.animateItem(),
-                    // In a list of the user's own, press and hold takes the listing out of it.
-                    onLongClick = custom?.let { c -> { store.toggleInList(c.id, l) } },
+                    // Press and hold to choose which lists it belongs in: move it, copy it, or take it out.
+                    onLongClick = { moving = l },
                 )
             }
         }
@@ -285,6 +296,7 @@ fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing
 fun SavedScreen(store: Store, onBack: () -> Unit, onOpen: (SearchQuery) -> Unit) {
     val saved by store.saved.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     var renaming by remember { mutableStateOf<SavedSearch?>(null) }
     renaming?.let { s ->
         NameDialog("Name this search", s.name ?: s.title, "Save", onDismiss = { renaming = null }) { store.renameSaved(s.id, it); renaming = null }
@@ -296,7 +308,12 @@ fun SavedScreen(store: Store, onBack: () -> Unit, onOpen: (SearchQuery) -> Unit)
                 SavedRow(
                     s,
                     onOpen = { onOpen(s.query) },
-                    onAlerts = { store.updateSaved(s.id) { it.copy(alerts = !it.alerts) }; Alerts.schedule(context) },
+                    onAlerts = {
+                        store.updateSaved(s.id) { it.copy(alerts = !it.alerts) }
+                        Alerts.schedule(context)
+                        // Turning the bell on is the moment a notification first makes sense.
+                        if (!s.alerts && Build.VERSION.SDK_INT >= 33) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    },
                     onDelete = { store.removeSaved(s.id); Alerts.schedule(context) },
                     onRename = { renaming = s },
                 )
