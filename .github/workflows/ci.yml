@@ -117,11 +117,13 @@ jobs:
           { echo "log<<CHANGELOG_END"; echo "$log"; echo "CHANGELOG_END"; } >> "$GITHUB_OUTPUT"
 
       - name: Write the What's new notes
-        # The last dozen user-facing changes ride inside the APK, so the app never has to ask a
-        # server what changed.
+        # What changed in this release, and only that: the same lines as the release notes. They
+        # ride inside the APK so the app never has to ask a server what changed.
+        env:
+          LOG: ${{ steps.ver.outputs.log }}
         run: |
           mkdir -p app/src/main/assets
-          bash scripts/changelog.sh -n 12 HEAD > app/src/main/assets/whatsnew.txt
+          printf '%s\n' "$LOG" > app/src/main/assets/whatsnew.txt
           cat app/src/main/assets/whatsnew.txt
 
       - name: Build release APK

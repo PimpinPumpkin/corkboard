@@ -79,6 +79,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -195,6 +196,11 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                 if (gone) store.setStatus(old.postingId, ListingStatus(gone = true, priceNow = old.priceText, checkedAt = System.currentTimeMillis() / 1000))
             } else {
                 error = e.message ?: "Could not load this listing"
+                // Gone, and never saved: nothing to show, and nothing a retry could bring back.
+                if (e is GoneException) {
+                    gone = true
+                    store.setStatus(opened.postingId, ListingStatus(gone = true, priceNow = opened.priceText, checkedAt = System.currentTimeMillis() / 1000))
+                }
             }
         } finally {
             refreshing = false
@@ -255,7 +261,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
         // Pulling down asks the site for the listing again, past the five minutes a copy may be reused.
         RefreshBox(isRefreshing = refreshing, onRefresh = { refreshing = true; attempt++ }, modifier = Modifier.fillMaxSize().padding(pad)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            if (gone || offline) Row(
+            if ((gone || offline) && posting != null) Row(
                 Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (gone) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh).clickable(enabled = offline) { attempt++ }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -389,8 +395,14 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                         )
                     }
                     error != null -> Column(Modifier.fillMaxWidth().padding(top = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(error.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Button(onClick = { attempt++ }, modifier = Modifier.padding(top = 12.dp)) { Text("Try again") }
+                        if (gone) {
+                            Icon(Icons.Outlined.Inventory2, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(40.dp))
+                            Text(error.orEmpty(), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+                            Text("No copy of it was saved on this phone.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+                        } else {
+                            Text(error.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Button(onClick = { attempt++ }, modifier = Modifier.padding(top = 12.dp)) { Text("Try again") }
+                        }
                     }
                     else -> Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 }
