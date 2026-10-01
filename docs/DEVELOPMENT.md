@@ -53,7 +53,7 @@ See README.md for what it does and how it talks to the site.
 ## Channels
 
 - `canary` branch: every push replaces the APK on the rolling `canary` release.
-- `main`: builds and tests on push. A daily cron cuts a `v0.2.<run>` nightly prerelease if main moved.
+- `main`: builds and tests on push. A daily cron cuts a `v0.1.<run>` nightly prerelease if main moved.
 - Stable: `promote-stable.yml` flips the newest nightly to a full release every Monday.
 
 Work lands on `canary` first and is merged to `main` when it is ready.
