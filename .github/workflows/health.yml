@@ -1,0 +1,89 @@
+name: Health check
+
+# Every day the app tests itself against the live site, on an emulator, through the same Cronet
+# users have: every kind of request it makes, and every assumption the parsers make about the
+# answers (app/src/main/java/app/corkboard/data/SelfCheck.kt).
+#
+# It stays quiet while things work. When craigslist changes something it opens ONE issue saying
+# which step broke, and closes it by itself on the first day the check passes again (after a
+# calibration fix, say). When craigslist will not talk to the runner's address at all, nothing is
+# learned and nothing is filed.
+
+on:
+  schedule:
+    - cron: "40 14 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency: health
+
+jobs:
+  self-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37.0
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build the debug app for the emulator
+        run: ./gradlew :app:assembleDebug -Pabis=x86_64 --no-daemon
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Run the self-check
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash scripts/self-check.sh app/build/outputs/apk/debug/app-debug.apk self-check-out; echo $? > self-check-out/code
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: self-check
+          path: self-check-out/
+
+      - name: File or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          code="$(cat self-check-out/code 2>/dev/null || echo 1)"
+          result="$(cat self-check-out/result.txt 2>/dev/null || echo 'RESULT FAIL at start: no result')"
+          echo "$result" >> "$GITHUB_STEP_SUMMARY"
+          open="$(gh issue list --state open --search 'Self-check failing in:title' --json number --jq '.[0].number // empty')"
+          if [ "$code" = "0" ]; then
+            [ -n "$open" ] && gh issue close "$open" --comment "The self-check passes again as of run ${{ github.run_id }}."
+            exit 0
+          fi
+          if [ "$code" = "2" ]; then
+            echo "craigslist did not answer this runner; nothing learned today." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          log="$(grep 'CorkboardSelfCheck' self-check-out/log.txt | sed 's/.*CorkboardSelfCheck: //' | tail -n 20)"
+          body="$(printf 'The daily self-check failed.\n\n```\n%s\n```\n\nRun: %s/%s/actions/runs/%s\n\nIf craigslist changed a value the calibration covers (API version, batch sizes, row tags), fix `calibration.json`, bump its `version` and commit to main: installed apps pick it up within a day. Otherwise the parsers need a code change. This issue closes by itself when the check passes.' "$log" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          if [ -n "$open" ]; then
+            echo "Issue #$open is already open." >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh issue create --title "Self-check failing: ${result#RESULT FAIL }" --body "$body"
+          fi
+          exit 1

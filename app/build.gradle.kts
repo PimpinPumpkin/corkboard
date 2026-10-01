@@ -15,10 +15,15 @@ val cronetVersion: String = providers.gradleProperty("corkboard.cronetVersion").
 val cronetAar = layout.projectDirectory.file("libs/cronet-$cronetVersion.aar").asFile
 if (!cronetAar.exists()) {
     cronetAar.parentFile.mkdirs()
-    val url = "https://github.com/PimpinPumpkin/Vela/releases/download/cronet-runtime/cronet-$cronetVersion.aar"
-    logger.lifecycle("Downloading $url")
+    // This project's own release first (the cronet workflow publishes there when it has to pack a
+    // version itself), then Vela's, which publishes every Chrome stable.
+    val urls = listOf("PimpinPumpkin/corkboard", "PimpinPumpkin/Vela").map { "https://github.com/$it/releases/download/cronet-runtime/cronet-$cronetVersion.aar" }
     val tmp = File(cronetAar.parentFile, cronetAar.name + ".part")
-    URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
+    val got = urls.any { url ->
+        logger.lifecycle("Downloading $url")
+        runCatching { URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } } }.isSuccess
+    }
+    if (!got) throw GradleException("No Cronet $cronetVersion AAR found. Run scripts/build-cronet-aar.sh $cronetVersion app/libs")
     tmp.renameTo(cronetAar)
 }
 

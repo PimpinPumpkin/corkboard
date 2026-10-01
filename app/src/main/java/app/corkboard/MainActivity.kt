@@ -29,7 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.util.Log
+import app.corkboard.data.Calibration
 import app.corkboard.data.ClUrls
+import app.corkboard.data.SelfCheck
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import app.corkboard.data.Listing
 import app.corkboard.data.SearchQuery
 import app.corkboard.ui.ResultsState
@@ -81,6 +87,22 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) linked(intent)?.let { openListing.value = it }
         // Work survives reboots by itself; this covers an app update or a cleared schedule.
         Alerts.schedule(this)
+        // Debug builds take `--ez self_check true`: the app tests itself against the live site and
+        // prints one RESULT line to logcat, which is what the project's automation reads.
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("self_check", false)) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val result = SelfCheck.run(app.api, app.http) { Log.i("CorkboardSelfCheck", it) }
+                Log.i("CorkboardSelfCheck", "Cronet ${BuildConfig.CRONET_VERSION}, calibration ${Calibration.current.version}")
+                Log.i(
+                    "CorkboardSelfCheck",
+                    when (result) {
+                        SelfCheck.Result.Pass -> "RESULT PASS"
+                        is SelfCheck.Result.Blocked -> "RESULT BLOCKED ${result.why}"
+                        is SelfCheck.Result.Fail -> "RESULT FAIL at ${result.step}: ${result.why}"
+                    },
+                )
+            }
+        }
         // Debug builds take `--ez check_alerts true` to run the saved-search check immediately.
         if (BuildConfig.DEBUG && intent.getBooleanExtra("check_alerts", false)) Alerts.runNow(this)
         // Debug builds take `--es theme light|dark` so screenshots never need a system setting changed.

@@ -139,7 +139,9 @@ jobs:
       - name: Publish canary build (rolling release)
         # Recreated on every push rather than edited, so it sorts to the top of the release page
         # and its tag follows the pushed commit. The download URL never changes.
-        if: github.event_name == 'push' && github.ref == 'refs/heads/canary'
+        # Also on a manual run of the canary branch: that is how the cronet workflow, whose own
+        # pushes cannot start a build, gets its update published.
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/canary'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
