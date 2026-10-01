@@ -172,6 +172,21 @@ class ParsersTest {
     }
 
     @Test
+    fun `a deleted listing's stub is gone, with the site's reason, and never a listing`() {
+        val stub = """{"apiVersion":8,"data":{"items":[{"attributes":[],"body":"This posting has been deleted by its author.","category":"","categoryId":0,
+            "hasContactInfo":false,"images":[],"location":{"areaId":0,"description":"","neighborhood":""},"notices":[],"postedDate":0,
+            "postingId":7975830630,"postingUuid":"c7w6BjJXDrtEFrQMvebeT3","section":"","title":"","unavailable":1,"url":""}]},"errors":[]}"""
+        val e = runCatching { Parsers.posting(stub) }.exceptionOrNull()
+        assertTrue(e is app.corkboard.data.GoneException)
+        assertEquals("This posting has been deleted by its author.", e!!.message)
+        // The flag alone is enough, whatever else the stub carries.
+        val flagged = """{"data":{"items":[{"postingId":1,"postingUuid":"a","title":"Old title","postedDate":5,"body":"This posting has been flagged for removal.","unavailable":1}]},"errors":[]}"""
+        assertEquals("This posting has been flagged for removal.", runCatching { Parsers.posting(flagged) }.exceptionOrNull()!!.message)
+        // And a live listing is untouched by any of this.
+        assertEquals("2021 Sample Roadster", Parsers.posting(fixture("posting.json")).title)
+    }
+
+    @Test
     fun `garbage is an error, not a crash`() {
         assertTrue(runCatching { Parsers.search("<html>blocked</html>") }.exceptionOrNull() is ApiException)
     }

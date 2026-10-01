@@ -94,6 +94,7 @@ import app.corkboard.data.ListingStatus
 import app.corkboard.data.Posting
 import app.corkboard.data.Store
 import app.corkboard.ui.Format
+import app.corkboard.ui.components.LocalPhotoFit
 import app.corkboard.ui.components.MiniMap
 import app.corkboard.ui.components.Panel
 import app.corkboard.ui.components.RefreshBox
@@ -151,6 +152,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
     var snapshot by remember { mutableStateOf<Snapshot?>(null) }
     var gone by remember { mutableStateOf(false) }
     var offline by remember { mutableStateOf(false) }
+    var goneReason by remember { mutableStateOf<String?>(null) }
     var refreshing by remember { mutableStateOf(false) }
     var listPicker by remember { mutableStateOf(false) }
     val lists by store.lists.collectAsStateWithLifecycle()
@@ -187,6 +189,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
             if (old != null) {
                 snapshot = saved
                 gone = e is GoneException
+                goneReason = e.message?.takeIf { gone }
                 offline = !gone
                 posting = old
                 if (gone) store.setStatus(old.postingId, ListingStatus(gone = true, priceNow = old.priceText, checkedAt = System.currentTimeMillis() / 1000))
@@ -260,7 +263,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                 val savedAgo = snapshot?.let { Format.ago(it.savedAt) } ?: "earlier"
                 Icon(Icons.Outlined.Inventory2, null, tint = onBanner)
                 Text(
-                    if (gone) "This listing has been deleted or has expired. This is the copy saved $savedAgo."
+                    if (gone) "${goneReason ?: "This listing has been deleted or has expired."} This is the copy saved $savedAgo."
                     else "Could not reach craigslist. This is the copy saved $savedAgo. Tap to try again.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = onBanner,
@@ -405,12 +408,12 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
 private fun Gallery(imageIds: List<String>, photo: (Int) -> File?, onOpen: (Int) -> Unit) {
     val pager = rememberPagerState { imageIds.size }
     Box {
-        HorizontalPager(pager, Modifier.fillMaxWidth().padding(horizontal = 12.dp).aspectRatio(4f / 3f).clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) { i ->
+        HorizontalPager(pager, Modifier.fillMaxWidth().padding(horizontal = 12.dp).aspectRatio(4f / 3f).clip(RoundedCornerShape(28.dp)).background(if (LocalPhotoFit.current.listing) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh)) { i ->
             AsyncImage(
                 // The archived copy when there is one: the site deletes photos along with the listing.
                 model = remember(i) { photo(i) } ?: Images.url(imageIds[i], Images.MEDIUM),
                 contentDescription = "Photo ${i + 1} of ${imageIds.size}",
-                contentScale = ContentScale.Crop,
+                contentScale = if (LocalPhotoFit.current.listing) ContentScale.Fit else ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().clickable { onOpen(i) },
             )
         }

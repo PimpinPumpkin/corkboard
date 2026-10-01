@@ -163,3 +163,11 @@ fun RefreshBox(isRefreshing: Boolean, onRefresh: () -> Unit, modifier: Modifier 
         if (flash.value > 0f) Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.primary.copy(alpha = flash.value)))
     }
 }
+
+/**
+ * Whether photos are shown whole, with empty space around them where their shape does not match
+ * the frame, or cropped to fill it. One switch for search results, one for a listing's own page.
+ */
+data class PhotoFit(val results: Boolean = false, val listing: Boolean = false)
+
+val LocalPhotoFit = androidx.compose.runtime.compositionLocalOf { PhotoFit() }

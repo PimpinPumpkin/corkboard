@@ -1,25 +1,19 @@
 name: CI
 
-# Three channels, the same arrangement as Vela and Sotto.
+# One channel. A push to main that changes something a user can see is built, tested, signed and
+# published as the next release, and that release is the one Obtainium and the download button
+# serve. Nothing else is published: no canary, no nightly.
 #
-#   canary   every push to the `canary` branch replaces the one APK on the rolling `canary` release.
-#   nightly  a daily cron cuts a v0.1.<run> PRERELEASE from main, only if main moved since the last.
-#   stable   promote-stable.yml flips the newest nightly to a full release once a week. Same APK,
-#            no rebuild.
-#
-# A push to main builds and tests only; the APK rides as a workflow artifact. Pushes never mint
-# releases, so a burst of commits cannot spam the release page.
+# Versions count releases, not builds: the first is 0.1.0 (code 10000), the next 0.1.1 (10001).
 on:
-  schedule:
-    - cron: '30 10 * * *'
   workflow_dispatch:
     inputs:
       force:
-        description: Cut a nightly even if main has not moved since the last one
+        description: Publish a release even if no user-facing change landed since the last one
         type: boolean
         default: false
   push:
-    branches: [ main, canary ]
+    branches: [ main ]
     # Things that provably never reach the APK. Workflow files are NOT ignored on purpose: they
     # change the build itself.
     paths-ignore:
@@ -28,15 +22,18 @@ on:
       - 'licenses/**'
       - '.gitignore'
       - '.github/FUNDING.yml'
+      - 'docs/**'
   pull_request:
     branches: [ main ]
 
 permissions:
   contents: write
 
+# Releases are numbered by counting the ones before them, so two builds of main must never run
+# at once: a second push waits for the first to finish.
 concurrency:
-  group: ci-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'push' }}
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -106,15 +103,18 @@ jobs:
 
       - name: Derive build version
         id: ver
-        # One rising line for every channel (1000 + run), so moving between canary, nightly and
-        # stable is always a plain upgrade. Only the NAME says which channel a build came from.
+        # The number of releases so far is this release's patch number, and 10000 plus it is its
+        # version code: 0.1.0 is 10000, 0.1.1 is 10001. A build that is not published (a pull
+        # request, or a push with nothing user-facing in it) gets the number the next release would.
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/canary" ]; then
-            echo "name=0.1.${{ github.run_number }}-canary" >> "$GITHUB_OUTPUT"
-          else
-            echo "name=0.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-          fi
-          echo "code=$(( 1000 + ${{ github.run_number }} ))" >> "$GITHUB_OUTPUT"
+          n="$(git tag -l 'v0.1.*' | wc -l | tr -d ' ')"
+          last="$(git tag -l 'v0.1.*' --sort=-v:refname | head -n1)"
+          echo "name=0.1.$n" >> "$GITHUB_OUTPUT"
+          echo "code=$(( 10000 + n ))" >> "$GITHUB_OUTPUT"
+          echo "last=$last" >> "$GITHUB_OUTPUT"
+          # What a user would read as the change list. Empty means nothing worth a release.
+          if [ -n "$last" ]; then log="$(bash scripts/changelog.sh "${last}..HEAD")"; else log="$(bash scripts/changelog.sh -n 30 HEAD)"; fi
+          { echo "log<<CHANGELOG_END"; echo "$log"; echo "CHANGELOG_END"; } >> "$GITHUB_OUTPUT"
 
       - name: Write the What's new notes
         # The last dozen user-facing changes ride inside the APK, so the app never has to ask a
@@ -141,68 +141,17 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
-      - name: Publish canary build (rolling release)
-        # Recreated on every push rather than edited, so it sorts to the top of the release page
-        # and its tag follows the pushed commit. The download URL never changes.
-        # Also on a manual run of the canary branch: that is how the cronet workflow, whose own
-        # pushes cannot start a build, gets its update published.
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/canary'
+      - name: Publish the release
+        # Only from main, and only when there is something to tell users about (or when asked).
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && (steps.ver.outputs.log != '' || github.event.inputs.force == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
+          LOG: ${{ steps.ver.outputs.log }}
         run: |
           VER="${{ steps.ver.outputs.name }}"
-          CODE="${{ steps.ver.outputs.code }}"
-          cp app/build/outputs/apk/release/app-release.apk corkboard-canary.apk
-          SUBJ="$(bash scripts/changelog.sh --latest HEAD)"
-          [ -z "$SUBJ" ] && SUBJ="$(git log -1 --no-merges --pretty=%s)"
-          NOTES="$(printf 'Canary branch.\n\nversionName: %s\nversionCode: %s\n\nLatest change: %s\n' "$VER" "$CODE" "$SUBJ")"
-          gh release delete canary --yes --cleanup-tag 2>/dev/null || true
-          gh release create canary --prerelease --target "$GITHUB_SHA" --title "Corkboard $VER" --notes "$NOTES" corkboard-canary.apk
-
-      - name: Publish nightly (prerelease)
-        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          LAST="$(git tag -l 'v0.[0-9]*' --sort=-v:refname | head -n1)"
-          if [ -n "$LAST" ] && \
-             [ "$(git rev-parse "${LAST}^{commit}")" = "$(git rev-parse HEAD)" ] && \
-             [ "${{ github.event.inputs.force || 'false' }}" != "true" ]; then
-            echo "main has not moved since $LAST: no nightly today."
-            exit 0
-          fi
-          VER="${{ steps.ver.outputs.name }}"
+          LAST="${{ steps.ver.outputs.last }}"
           cp app/build/outputs/apk/release/app-release.apk "corkboard-v${VER}.apk"
-          # Commit subjects are written as plain changelog lines, so this reads as release notes.
-          if [ -n "$LAST" ]; then
-            LOG="$(bash scripts/changelog.sh "${LAST}..HEAD")"
-            COMPARE="**Full changelog:** https://github.com/${{ github.repository }}/compare/${LAST}...v${VER}"
-          else
-            LOG="$(bash scripts/changelog.sh -n 20 HEAD)"
-            COMPARE=""
-          fi
           [ -z "$LOG" ] && LOG="- Maintenance and internal changes"
-          NOTES="$(printf 'Nightly build.\n\nWhat'\''s changed in %s\n\n%s\n\n%s\n' "$VER" "$LOG" "$COMPARE")"
-          gh release create "v${VER}" \
-            --title "Corkboard $VER nightly" \
-            --target "$GITHUB_SHA" \
-            --prerelease \
-            --notes "$NOTES" \
-            "corkboard-v${VER}.apk"
-
-      - name: Prune old nightlies (stables are kept for good)
-        # Thirty nightlies is a month of bisect range. The v0.* filter is load bearing: `canary`
-        # is a prerelease too and must never be swept up here.
-        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api --paginate 'repos/${{ github.repository }}/releases?per_page=100' \
-            --jq '.[] | select(.tag_name | test("^v0\\.")) | "\(.created_at)\t\(.prerelease)\t\(.tag_name)"' \
-            | sort -r > /tmp/app-releases.txt
-          awk -F'\t' '$2=="true"{print $3}' /tmp/app-releases.txt | tail -n +31 > /tmp/doomed.txt
-          echo "keeping every stable; pruning $(wc -l < /tmp/doomed.txt) old nightlies"
-          while read -r tag; do
-            [ -n "$tag" ] || continue
-            gh release delete "$tag" --yes --cleanup-tag || true
-          done < /tmp/doomed.txt
+          if [ -n "$LAST" ]; then COMPARE="**Full changelog:** https://github.com/${{ github.repository }}/compare/${LAST}...v${VER}"; else COMPARE=""; fi
+          NOTES="$(printf 'What'\''s changed in %s\n\n%s\n\n%s\n' "$VER" "$LOG" "$COMPARE")"
+          gh release create "v${VER}" --title "Corkboard $VER" --target "$GITHUB_SHA" --latest --notes "$NOTES" "corkboard-v${VER}.apk"

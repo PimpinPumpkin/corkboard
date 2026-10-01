@@ -39,6 +39,9 @@ import kotlinx.coroutines.launch
 import app.corkboard.data.Listing
 import app.corkboard.data.SearchQuery
 import app.corkboard.ui.ResultsState
+import androidx.compose.runtime.CompositionLocalProvider
+import app.corkboard.ui.components.LocalPhotoFit
+import app.corkboard.ui.components.PhotoFit
 import app.corkboard.ui.screens.AreaScreen
 import app.corkboard.ui.screens.ListsScreen
 import app.corkboard.ui.screens.Shelf
@@ -123,7 +126,10 @@ class MainActivity : ComponentActivity() {
                 )
                 onDispose {}
             }
+            val fitResults by app.store.fitResults.collectAsStateWithLifecycle()
+            val fitListing by app.store.fitListing.collectAsStateWithLifecycle()
             CorkboardTheme(dark) {
+                CompositionLocalProvider(LocalPhotoFit provides PhotoFit(fitResults, fitListing)) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                     val area by app.store.area.collectAsStateWithLifecycle()
                     val stack = remember { mutableStateListOf<Screen>(Screen.Home) }
@@ -183,6 +189,7 @@ class MainActivity : ComponentActivity() {
                             is Screen.Posting -> PostingScreen(screen.listing, app.api, app.store, app.archive, onBack = ::pop)
                         }
                     }
+                }
                 }
             }
         }

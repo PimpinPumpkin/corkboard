@@ -45,12 +45,14 @@ import app.corkboard.ui.theme.PriceFont
 
 @Composable
 private fun Photo(listing: Listing, modifier: Modifier) {
-    Box(modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-        val id = listing.imageIds.firstOrNull()
+    val id = listing.imageIds.firstOrNull()
+    // A whole photo sits on nothing: the space around it is just the page, not a gray frame.
+    val framed = id == null || !LocalPhotoFit.current.results
+    Box(if (framed) modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh) else modifier, contentAlignment = Alignment.Center) {
         if (id == null) {
             Icon(Icons.Outlined.ImageNotSupported, null, tint = MaterialTheme.colorScheme.outline)
         } else {
-            AsyncImage(model = Images.url(id, Images.THUMB), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            AsyncImage(model = Images.url(id, Images.THUMB), contentDescription = null, contentScale = if (LocalPhotoFit.current.results) ContentScale.Fit else ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
     }
 }

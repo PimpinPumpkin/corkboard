@@ -50,13 +50,15 @@ See README.md for what it does and how it talks to the site.
 - **Replying, posting and accounts go to the browser.** They sit behind the site's own checks.
 - The name and icon never use "craigslist" as a brand. The app says it is unaffiliated.
 
-## Channels
+## Releases
 
-- `canary` branch: every push replaces the APK on the rolling `canary` release.
-- `main`: builds and tests on push. A daily cron cuts a `v0.1.<run>` nightly prerelease if main moved.
-- Stable: `promote-stable.yml` flips the newest nightly to a full release every Monday.
+There is one channel. A push to `main` that changes something a user can see is built, tested,
+signed and published as the next release (`.github/workflows/ci.yml`). Commits whose subject
+starts with `Docs:`, or that only touch documentation or comments, build and test but publish
+nothing. Versions count releases: `0.1.0` is code 10000, `0.1.1` is 10001.
 
-Work lands on `canary` first and is merged to `main` when it is ready.
+So `main` is what users get. Test before pushing: the unit tests, the release build on an
+emulator, and `scripts/self-check.sh`.
 
 ## Building
 
@@ -72,7 +74,7 @@ check at once instead of hours later, and log every request as `CorkboardHttp` i
 
 - **Cronet updates itself.** `cronet.yml` runs weekly: when Chrome for Android stable moves past
   `corkboard.cronetVersion`, it fetches or packs that Cronet, builds and tests the app with it, and
-  runs the self-check on an emulator. A pass is committed to main and canary; a failure opens one
+  runs the self-check on an emulator. A pass is committed to main and released; a failure opens one
   issue and commits nothing.
 - **The app checks itself daily.** `health.yml` runs `data/SelfCheck.kt` against the live site and
   opens one issue when a step breaks, closing it when the check passes again. `scripts/self-check.sh

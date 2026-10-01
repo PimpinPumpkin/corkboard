@@ -165,7 +165,7 @@ class Posting(
 open class ApiException(message: String) : Exception(message)
 
 /** The site no longer has this listing: deleted, expired or flagged. */
-class GoneException : ApiException("This listing has been deleted or has expired.")
+class GoneException(reason: String? = null) : ApiException(reason?.takeIf { it.isNotBlank() } ?: "This listing has been deleted or has expired.")
 
 /** A list of kept listings the user named: "Trucks under 10k", "For the shop". */
 @Serializable

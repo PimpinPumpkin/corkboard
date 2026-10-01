@@ -26,7 +26,8 @@ Android 10 or later. Tap a button, install, done. No account.
   bedrooms, pets and laundry for housing; and so on for every category.
 - **Search near you.** Use your location or a postal code and a distance, and hide results from
   across the border.
-- **Light and dark themes**, grid or list, and photos you can pinch to zoom.
+- **Light and dark themes**, grid or list, photos you can pinch to zoom, and the choice of whole
+  or cropped photos.
 - **A map on every listing**, with no maps app needed.
 - **Favorites, your own lists, and private notes.** Share a list or save it as a spreadsheet.
 - **Press and hold any listing** for a quick preview with its photos, and like it, add it to a
@@ -58,14 +59,8 @@ two; [open an issue](https://github.com/PimpinPumpkin/corkboard/issues) if you f
 **Obtainium** (recommended) installs the app and keeps it updated. **Download APK** takes you to
 the latest release: download the `.apk` file and open it.
 
-| Channel | What it is | How often |
-| --- | --- | --- |
-| **Stable** | The newest nightly, promoted | Weekly |
-| **Nightly** | Built from `main` | Every day `main` changes |
-| **Canary** | Built from the `canary` branch | Every push |
-
-All three share one signing key and one rising version code, so moving between them is a plain
-update.
+There is one release channel. Every release is signed with the same key, so each installs over
+the last.
 
 </details>
 

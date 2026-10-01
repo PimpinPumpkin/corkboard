@@ -115,7 +115,7 @@ fun ListingPeek(
                         } else {
                             val pager = rememberPagerState { listing.imageIds.size }
                             HorizontalPager(pager, Modifier.fillMaxSize()) { i ->
-                                AsyncImage(model = Images.url(listing.imageIds[i], Images.MEDIUM), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                AsyncImage(model = Images.url(listing.imageIds[i], Images.MEDIUM), contentDescription = null, contentScale = if (LocalPhotoFit.current.listing) ContentScale.Fit else ContentScale.Crop, modifier = Modifier.fillMaxSize())
                             }
                             if (listing.imageIds.size > 1) Text(
                                 "${pager.currentPage + 1} / ${listing.imageIds.size}",

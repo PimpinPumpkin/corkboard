@@ -210,6 +210,13 @@ object Parsers {
 
     fun posting(body: String): Posting {
         val p = data(body)["items"].arr()?.firstOrNull().obj() ?: throw GoneException()
+        // A listing that was deleted, flagged or has expired still answers, as a stub marked
+        // unavailable whose body is the reason ("This posting has been deleted by its author.").
+        // That is not a listing, and must never be shown or saved as one.
+        val unavailable = p["unavailable"].prim()?.content.let { it != null && it != "0" && it != "false" }
+        if (unavailable || ((p["postedDate"].long() ?: 0L) == 0L && p["title"].str().isNullOrBlank())) {
+            throw GoneException(p["body"].str()?.replace(Regex("<[^>]+>"), " ")?.trim()?.take(200))
+        }
         val loc = p["location"].obj()
         val place = listOfNotNull(
             loc?.get("neighborhood").name() ?: loc?.get("description").name(),

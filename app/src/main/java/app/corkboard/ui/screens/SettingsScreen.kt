@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -67,6 +68,13 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
                     Text(label, style = MaterialTheme.typography.bodyLarge)
                 }
             }
+
+            Heading("Photos")
+            val fitResults by store.fitResults.collectAsStateWithLifecycle()
+            val fitListing by store.fitListing.collectAsStateWithLifecycle()
+            Toggle("Whole photos in search results", "Show each photo in full instead of cropping it to a square.", fitResults) { store.setFitResults(it) }
+            Spacer(Modifier.height(10.dp))
+            Toggle("Whole photos on a listing", "Show each photo in full in the listing's gallery instead of cropping it to fill.", fitListing) { store.setFitListing(it) }
 
             Heading("Listings language")
             val language by store.language.collectAsStateWithLifecycle()
@@ -190,5 +198,20 @@ private fun Item(title: String, detail: String, onClick: () -> Unit) {
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge)
         Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun Toggle(title: String, detail: String, on: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable { onChange(!on) }.padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = on, onCheckedChange = onChange)
     }
 }

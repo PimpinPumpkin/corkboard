@@ -7,8 +7,7 @@ name: Cronet update
 # that version's Cronet (already published by Vela, or packed here from Chromium's own builds),
 # build the app with it, and run the app's self-check against the live site on an emulator.
 #
-#   passes   the bump is committed to main and canary. The nightly cron then ships it as a
-#            nightly, and the weekly promotion as a stable, like any other change.
+#   passes   the bump is committed to main and released, like any other change.
 #   fails    nothing is committed, and one issue is opened with what broke. Users stay on the
 #            version that works.
 #   blocked  craigslist would not answer the runner, so nothing could be judged. Nothing is
@@ -164,19 +163,15 @@ jobs:
             exit 1
           fi
 
-          # It works. Commit to main, bring canary along, and publish canary (a push made by a
-          # workflow does not start other workflows, so its build is asked for by name).
+          # It works. Commit to main and ask for the release by name (a push made by a workflow does
+          # not start other workflows).
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add gradle.properties
           # A new major is news; a point release within one is named in full.
           if [ "${v%%.*}" != "${pinned%%.*}" ]; then what="Chrome ${v%%.*}"; else what="$v"; fi
           git commit -m "Update the built-in Chrome network stack to $what" -m "Cronet $pinned to $v. Built, tested and checked against the live site by the cronet workflow."
-          # Full ref names throughout: the rolling canary release has a tag called "canary" too.
           git push origin HEAD:refs/heads/main
-          git fetch --no-tags origin refs/heads/canary:refs/remotes/origin/canary
-          if git merge-base --is-ancestor refs/remotes/origin/canary HEAD; then git push origin HEAD:refs/heads/canary
-          else git checkout -B cronet-canary refs/remotes/origin/canary && git merge --no-edit refs/remotes/origin/main && git push origin HEAD:refs/heads/canary; fi
-          gh workflow run ci.yml --ref canary || true
+          gh workflow run ci.yml --ref main || true
           [ -n "$open" ] && gh issue close "$open" --comment "Cronet $v passed and is committed."
-          echo "Committed Cronet $v to main and canary." >> "$GITHUB_STEP_SUMMARY"
+          echo "Committed Cronet $v to main." >> "$GITHUB_STEP_SUMMARY"

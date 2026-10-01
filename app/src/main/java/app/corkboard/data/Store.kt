@@ -51,7 +51,7 @@ class Store(context: Context) {
 
     // ---- backup ----
 
-    private val backedUp = listOf("theme", "language", "grid", "homeCountryOnly", "pinned")
+    private val backedUp = listOf("theme", "language", "grid", "homeCountryOnly", "pinned", "fitResults", "fitListing")
 
     /** Writes everything the app remembers into one zip. */
     fun backupTo(out: java.io.OutputStream) {
@@ -71,6 +71,8 @@ class Store(context: Context) {
             settings["language"]?.let { putString("language", it) }
             settings["pinned"]?.let { putString("pinned", it) }
             settings["grid"]?.let { putBoolean("grid", it == "true") }
+            settings["fitResults"]?.let { putBoolean("fitResults", it == "true") }
+            settings["fitListing"]?.let { putBoolean("fitListing", it == "true") }
             settings["homeCountryOnly"]?.let { putBoolean("homeCountryOnly", it == "true") }
         }.commit()
         return true
@@ -211,6 +213,18 @@ class Store(context: Context) {
         // A listing whose site is unknown is kept: better one stray than a missing result.
         return { l -> known[l.areaId].let { it == null || it == home } }
     }
+
+    // ---- whole photos ----
+
+    private val _fitResults = MutableStateFlow(prefs.getBoolean("fitResults", false))
+    private val _fitListing = MutableStateFlow(prefs.getBoolean("fitListing", false))
+
+    /** Show photos whole instead of cropped: in search results, and on a listing's own page. Both off to begin with. */
+    val fitResults: StateFlow<Boolean> = _fitResults.asStateFlow()
+    val fitListing: StateFlow<Boolean> = _fitListing.asStateFlow()
+
+    fun setFitResults(on: Boolean) { prefs.edit().putBoolean("fitResults", on).apply(); _fitResults.value = on }
+    fun setFitListing(on: Boolean) { prefs.edit().putBoolean("fitListing", on).apply(); _fitListing.value = on }
 
     private val _grid = MutableStateFlow(prefs.getBoolean("grid", true))
     val grid: StateFlow<Boolean> = _grid.asStateFlow()
