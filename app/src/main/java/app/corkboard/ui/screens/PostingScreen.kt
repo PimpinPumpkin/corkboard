@@ -101,11 +101,18 @@ private fun openInBrowser(context: Context, url: String) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit) {
+fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit) {
     val context = LocalContext.current
     val favorites by store.favorites.collectAsStateWithLifecycle()
-    val isFavorite = favorites.any { it.postingId == listing.postingId }
     var posting by remember { mutableStateOf<Posting?>(null) }
+    // A listing opened from a link arrives as nothing but its address. Once it has loaded, it is
+    // filled in from the page so it can be hearted, hidden and noted like one opened from a search.
+    val listing = remember(opened, posting) {
+        val p = posting
+        if (opened.postingId != 0L || p == null) opened
+        else opened.copy(postingId = p.postingId, postedAt = p.postedAt, title = p.title, priceText = p.priceText, imageIds = p.imageIds, place = p.place, lat = p.lat, lon = p.lon)
+    }
+    val isFavorite = favorites.any { it.postingId == listing.postingId }
     var error by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableIntStateOf(0) }
     var menu by remember { mutableStateOf(false) }
@@ -182,6 +189,7 @@ fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit
                         (p?.place?.takeIf { it.isNotBlank() } ?: listing.place).takeIf { it.isNotBlank() },
                         "posted ${Format.ago(postedAt)}".takeIf { postedAt > 0 },
                         updated?.let { "updated ${Format.ago(it)}" },
+                        "repost".takeIf { p?.repostOf != null },
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -192,7 +200,8 @@ fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit
                 var note by remember(listing.postingId) { mutableStateOf(notes[listing.postingId].orEmpty()) }
                 OutlinedTextField(
                     value = note,
-                    onValueChange = { note = it.take(2000); store.setNote(listing.postingId, note) },
+                    onValueChange = { note = it.take(2000); store.setNote(listing, note) },
+                    enabled = listing.postingId != 0L,
                     modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     label = { Text("Your note") },
                     placeholder = { Text("Asked about the timing belt, offered 4,200...") },
@@ -233,7 +242,10 @@ fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit
                         Text(
                             listOfNotNull(
                                 "Posted ${Format.date(p.postedAt)}",
-                                updated?.let { "Updated ${Format.date(it)}" },
+                                // The site stamps most listings "updated" a second after posting. Shown
+                                // as the site shows it, here, but only called out up top when it is real.
+                                p.updatedAt.takeIf { it > 0 && it != p.postedAt }?.let { "Updated ${Format.date(it)}" },
+                                p.repostOf?.let { "A repost of an earlier listing ($it)" },
                                 "Posting ID ${p.postingId}",
                             ).joinToString("\n"),
                             style = MaterialTheme.typography.bodySmall,

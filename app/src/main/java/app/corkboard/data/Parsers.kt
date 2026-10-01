@@ -233,6 +233,7 @@ object Parsers {
             area = loc?.get("area").str().orEmpty(),
             category = p["category"].str().orEmpty(),
             url = p["url"].str().orEmpty(),
+            repostOf = p["repostOf"].long()?.takeIf { it > 0 },
             notices = p["notices"].arr().orEmpty().mapNotNull { it.str() ?: it.obj()?.get("text").str() },
         )
     }

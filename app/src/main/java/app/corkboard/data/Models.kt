@@ -158,6 +158,8 @@ class Posting(
     val category: String,
     val url: String,
     val notices: List<String>,
+    /** The posting id this one replaces, when the seller posted the same thing again. */
+    val repostOf: Long? = null,
 )
 
 class ApiException(message: String) : Exception(message)

@@ -153,10 +153,21 @@ class Store(context: Context) {
     /** The user's own words about a listing, by posting id. Kept on the phone like everything else. */
     val notes: StateFlow<Map<Long, String>> = _notes.asStateFlow()
 
-    fun setNote(postingId: Long, text: String) {
-        val next = if (text.isBlank()) _notes.value - postingId else _notes.value + (postingId to text.trim())
+    private val _noted = MutableStateFlow(read("noted.json", ListSerializer(Listing.serializer())).orEmpty())
+
+    /** The listings that have a note, newest note first, whether or not they are favorites too. */
+    val noted: StateFlow<List<Listing>> = _noted.asStateFlow()
+
+    /** Writes or, with blank text, removes the note on [listing], and keeps the listing to find it by. */
+    fun setNote(listing: Listing, text: String) {
+        val id = listing.postingId
+        val next = if (text.isBlank()) _notes.value - id else _notes.value + (id to text)
         write("notes.json", noteSerializer, next)
         _notes.value = next
+        val others = _noted.value.filter { it.postingId != id }
+        val listings = if (text.isBlank()) others else listOf(listing) + others
+        write("noted.json", ListSerializer(Listing.serializer()), listings)
+        _noted.value = listings
     }
 
     fun unhideAll() {

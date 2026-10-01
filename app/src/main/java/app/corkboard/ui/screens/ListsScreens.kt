@@ -1,6 +1,7 @@
 package app.corkboard.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,14 +62,33 @@ private fun ListScaffold(title: String, onBack: () -> Unit, empty: String?, cont
     }
 }
 
+/** The listings the user kept: the hearted ones, or every one with a note on it. */
 @Composable
 fun FavoritesScreen(store: Store, onBack: () -> Unit, onOpen: (Listing) -> Unit) {
     val favorites by store.favorites.collectAsStateWithLifecycle()
+    val noted by store.noted.collectAsStateWithLifecycle()
     val notes by store.notes.collectAsStateWithLifecycle()
-    ListScaffold("Favorites", onBack, if (favorites.isEmpty()) "Tap the heart on a listing to keep it here." else null) { pad ->
+    var showNoted by rememberSaveable { mutableStateOf(false) }
+    val favoriteIds = remember(favorites) { favorites.map { it.postingId }.toHashSet() }
+    val shown = if (showNoted) noted else favorites
+    ListScaffold("Saved listings", onBack, null) { pad ->
         LazyColumn(contentPadding = pad) {
-            items(favorites, key = { it.postingId }) { l ->
-                ListingRow(l, favorite = true, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, note = notes[l.postingId])
+            item {
+                Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !showNoted, onClick = { showNoted = false }, label = { Text("Favorites · ${favorites.size}") })
+                    FilterChip(selected = showNoted, onClick = { showNoted = true }, label = { Text("With notes · ${noted.size}") })
+                }
+            }
+            if (shown.isEmpty()) item {
+                Text(
+                    if (showNoted) "Write a note on any listing and it shows up here, hearted or not." else "Tap the heart on a listing to keep it here.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                )
+            }
+            items(shown, key = { it.postingId }) { l ->
+                ListingRow(l, favorite = l.postingId in favoriteIds, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, note = notes[l.postingId])
             }
         }
     }

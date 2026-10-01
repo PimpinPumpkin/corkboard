@@ -23,6 +23,8 @@ craigslist.
   (your maps app, or OpenStreetMap in the browser if there is none).
 - **A map on the listing itself**, with no maps app needed, and when it was posted and last updated.
 - **Favorites, notes and hidden listings**, kept on the phone. Press and hold a result to hide it.
+  Every listing with a note is kept under Saved listings, hearted or not.
+- **Opens craigslist links.** Share a listing link to Corkboard, or choose it under "Open with".
 - **Pin the categories you use** to the top of the home screen.
 - **Saved searches with alerts.** The phone checks every few hours and tells you what is new.
   No push service, no account.

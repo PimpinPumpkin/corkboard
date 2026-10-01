@@ -72,6 +72,15 @@ object ClUrls {
     fun web(uuid: String, slug: String?): String =
         if (slug.isNullOrEmpty()) "${BrowserHeaders.ORIGIN}/view/$uuid" else "${BrowserHeaders.ORIGIN}/view/d/$slug/$uuid"
 
+    /**
+     * The listing a craigslist link points at, as a bare [Listing] the listing screen can load:
+     * `/view/<uuid>` or `/view/d/<slug>/<uuid>`. Null for any other address.
+     */
+    fun listingFromLink(link: String): Listing? {
+        val m = Regex("""https?://(?:www\.)?craigslist\.org/view/(?:d/([^/?#\s]+)/)?([A-Za-z0-9]{16,32})(?=$|[/?#\s])""").find(link) ?: return null
+        return Listing(postingId = 0, postedAt = 0, categoryId = 0, slug = m.groupValues[1].ifEmpty { null }, uuid = m.groupValues[2])
+    }
+
     /** The same two sizes the site's own page asks for. */
     const val QUICK = 360
     const val CHUNK = 1080

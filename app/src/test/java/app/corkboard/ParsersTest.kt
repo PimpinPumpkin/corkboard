@@ -121,6 +121,10 @@ class ParsersTest {
         assertTrue(p.bodyHtml.contains("<br>"))
         assertEquals(37.5308, p.lat!!, 1e-6)
         assertEquals("fremont / union city / newark, east bay", p.place)
+        assertNull(p.repostOf)
+        val repost = Parsers.posting("""{"data":{"items":[{"postingId":7958815446,"postingUuid":"awg","title":"t","body":"b","postedDate":1788276860,"updatedDate":1788276861,"repostOf":7939244682}]},"errors":[]}""")
+        assertEquals(7939244682L, repost.repostOf)
+        assertEquals(1788276861L, repost.updatedAt)
     }
 
     @Test

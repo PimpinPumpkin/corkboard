@@ -138,6 +138,17 @@ class RequestShapeTest {
         assertEquals("https://map4.craigslist.org/t09/13/1304/2930.png", app.corkboard.ui.components.Tiles.url(1304, 2930, 13))
     }
 
+    @Test
+    fun `craigslist links open as listings, and nothing else does`() {
+        val l = ClUrls.listingFromLink("https://www.craigslist.org/view/d/sample-1999-sedan-low-miles/abcDEF0123456789abcdef")!!
+        assertEquals("abcDEF0123456789abcdef", l.uuid)
+        assertEquals("sample-1999-sedan-low-miles", l.slug)
+        assertEquals("abcDEF0123456789abcdef", ClUrls.listingFromLink("Look at this https://www.craigslist.org/view/abcDEF0123456789abcdef?lang=en")!!.uuid)
+        assertNull(ClUrls.listingFromLink("https://www.craigslist.org/about/help"))
+        assertNull(ClUrls.listingFromLink("https://evil.example/www.craigslist.org/view/abcDEF0123456789abcdef"))
+        assertNull(ClUrls.listingFromLink("just some shared text"))
+    }
+
     // ---- headers ----
 
     @Test

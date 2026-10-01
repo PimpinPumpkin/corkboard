@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.corkboard.data.ClUrls
 import app.corkboard.data.Listing
 import app.corkboard.data.SearchQuery
 import app.corkboard.ui.ResultsState
@@ -53,8 +54,15 @@ class MainActivity : ComponentActivity() {
     /** Set when a new-listings notification was tapped; the UI opens the saved searches and clears it. */
     private val openSaved = mutableStateOf(false)
 
+    /** A listing to open, from a craigslist link tapped or shared into the app. */
+    private val openListing = mutableStateOf<Listing?>(null)
+
+    private fun linked(intent: Intent): Listing? =
+        (intent.dataString ?: intent.getStringExtra(Intent.EXTRA_TEXT))?.let(ClUrls::listingFromLink)
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        linked(intent)?.let { openListing.value = it }
         if (intent.getBooleanExtra(Alerts.EXTRA_OPEN_SAVED, false)) openSaved.value = true
     }
 
@@ -62,6 +70,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val app = application as CorkboardApp
         if (savedInstanceState == null && intent.getBooleanExtra(Alerts.EXTRA_OPEN_SAVED, false)) openSaved.value = true
+        if (savedInstanceState == null) linked(intent)?.let { openListing.value = it }
         // Work survives reboots by itself; this covers an app update or a cleared schedule.
         Alerts.schedule(this)
         // Debug builds take `--ez check_alerts true` to run the saved-search check immediately.
@@ -95,6 +104,10 @@ class MainActivity : ComponentActivity() {
                         stack += Screen.Results(ResultsState(app.api, app.store, query))
                     }
                     BackHandler(enabled = stack.size > 1) { pop() }
+                    LaunchedEffect(openListing.value) {
+                        openListing.value?.let { stack += Screen.Posting(it) }
+                        openListing.value = null
+                    }
                     LaunchedEffect(openSaved.value) {
                         if (openSaved.value) {
                             openSaved.value = false
