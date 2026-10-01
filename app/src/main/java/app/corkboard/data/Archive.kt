@@ -92,6 +92,27 @@ class Archive(context: Context, private val http: Http) {
         }
     }
 
+    /**
+     * Asks the site about one kept listing and records the answer: still up (and at what price,
+     * with the old one if it moved) or gone. Returns null when the site could not be reached,
+     * which says nothing either way.
+     */
+    suspend fun check(listing: Listing, api: ClApi, now: Long = System.currentTimeMillis() / 1000): ListingStatus? {
+        val uuid = listing.uuid ?: return null
+        return try {
+            val body = api.postingRaw(uuid, fresh = true)
+            val p = Parsers.posting(body)
+            val snapshot = withContext(Dispatchers.IO) { save(uuid, body, p.priceText, now) }
+            // A price the listing row itself remembers counts as "before" too, the first time around.
+            val was = snapshot.priceWas ?: listing.priceText?.takeIf { p.priceText != null && it != p.priceText }
+            ListingStatus(gone = false, priceNow = p.priceText, priceWas = was?.takeIf { it != p.priceText }, checkedAt = now)
+        } catch (e: GoneException) {
+            ListingStatus(gone = true, priceNow = listing.priceText, checkedAt = now)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Drops the oldest text copies past [MAX_TEXT], and never one that is in [kept]. */
     fun prune(kept: Set<String>) {
         scope.launch {

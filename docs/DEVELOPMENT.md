@@ -43,8 +43,10 @@ See README.md for what it does and how it talks to the site.
   the listing screen then shows the saved copy. `repostOf` in a listing names the posting it replaces.
 - **One request leaves craigslist's hosts:** `calibration.json` from this repository, once a day
   (`data/Calibration.kt`). It can retune the API version, batch sizes and row tags and show a notice;
-  it cannot change hosts. To ship a fix without an app update, edit the value, bump `version`,
-  commit to main.
+  it cannot change hosts, and the app only accepts it signed. To ship a fix without an app update:
+  edit the value, bump `version`, run `scripts/sign-calibration.sh`, and commit `calibration.json`
+  with `calibration.json.sig` to main. The signing key lives outside the repository; a unit test
+  fails the build when the two files do not match.
 - **Replying, posting and accounts go to the browser.** They sit behind the site's own checks.
 - The name and icon never use "craigslist" as a brand. The app says it is unaffiliated.
 

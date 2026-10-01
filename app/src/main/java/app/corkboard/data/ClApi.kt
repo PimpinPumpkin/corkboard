@@ -125,9 +125,15 @@ class ClApi(private val http: Http) {
         return r.text()
     }
 
-    /** Reads the project's calibration file and adopts it if it is newer. Quiet about any failure. */
-    suspend fun refreshCalibration(): String? =
-        runCatching { http.get(Calibration.URL, BrowserHeaders.Kind.Page).takeIf { it.ok }?.text() }.getOrNull()?.takeIf { Calibration.adopt(it) }
+    /**
+     * Reads the project's calibration file and its signature and adopts the pair if it is signed
+     * and newer. Returns the two texts when it did, to be kept for the next launch. Quiet about any failure.
+     */
+    suspend fun refreshCalibration(): Pair<String, String>? = runCatching {
+        val text = http.get(Calibration.URL, BrowserHeaders.Kind.Page, fresh = true).takeIf { it.ok }?.text() ?: return null
+        val signature = http.get(Calibration.SIGNATURE_URL, BrowserHeaders.Kind.Page, fresh = true).takeIf { it.ok }?.text() ?: return null
+        if (Calibration.adopt(text, signature)) text to signature else null
+    }.getOrNull()
 
     suspend fun posting(uuid: String): Posting = Parsers.posting(postingRaw(uuid))
     suspend fun suggest(type: String, text: String): List<String> = Parsers.suggestions(get(ClUrls.suggest(type, text)))

@@ -28,11 +28,11 @@ class CorkboardApp : Application(), ImageLoaderFactory {
         // The calibration in force: the last one fetched if newer than what is compiled in, then a
         // look for a newer one, at most once a day.
         val saved = getSharedPreferences("calibration", MODE_PRIVATE)
-        saved.getString("json", null)?.let(Calibration::adopt)
+        saved.getString("json", null)?.let { Calibration.adopt(it, saved.getString("signature", null)) }
         if (System.currentTimeMillis() - saved.getLong("checked", 0) > 24 * 60 * 60 * 1000L) {
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
                 val fresh = api.refreshCalibration()
-                saved.edit().putLong("checked", System.currentTimeMillis()).apply { if (fresh != null) putString("json", fresh) }.apply()
+                saved.edit().putLong("checked", System.currentTimeMillis()).apply { if (fresh != null) putString("json", fresh.first).putString("signature", fresh.second) }.apply()
             }
         }
         archive.prune(store.keptUuids())

@@ -34,7 +34,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import app.corkboard.data.Archive
+import app.corkboard.data.ClApi
 import app.corkboard.data.Export
+import app.corkboard.ui.components.RefreshBox
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import app.corkboard.data.Images
 import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
@@ -108,6 +115,7 @@ private fun ListScaffold(title: String, onBack: () -> Unit, empty: String?, cont
 sealed interface Shelf {
     data object Favorites : Shelf
     data object Noted : Shelf
+    data object Recent : Shelf
     data class Custom(val id: Long) : Shelf
 }
 
@@ -117,6 +125,7 @@ fun ListsScreen(store: Store, onBack: () -> Unit, onOpen: (Shelf) -> Unit) {
     val favorites by store.favorites.collectAsStateWithLifecycle()
     val noted by store.noted.collectAsStateWithLifecycle()
     val lists by store.lists.collectAsStateWithLifecycle()
+    val recent by store.recent.collectAsStateWithLifecycle()
     var creating by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var importNote by remember { mutableStateOf<String?>(null) }
@@ -135,6 +144,7 @@ fun ListsScreen(store: Store, onBack: () -> Unit, onOpen: (Shelf) -> Unit) {
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding() + 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item { ShelfCard(Icons.Outlined.FavoriteBorder, "Favorites", favorites.size, favorites.firstOrNull()) { onOpen(Shelf.Favorites) } }
             item { ShelfCard(Icons.Outlined.EditNote, "With notes", noted.size, noted.firstOrNull()) { onOpen(Shelf.Noted) } }
+            item { ShelfCard(Icons.Outlined.History, "Recently viewed", recent.size, recent.firstOrNull()) { onOpen(Shelf.Recent) } }
             items(lists, key = { it.id }) { l ->
                 ShelfCard(Icons.AutoMirrored.Outlined.ListAlt, l.name, l.items.size, l.items.firstOrNull(), Modifier.animateItem()) { onOpen(Shelf.Custom(l.id)) }
             }
@@ -203,8 +213,13 @@ private fun NameDialog(title: String, initial: String, confirm: String, onDismis
 /** One collection, with what can be done to it: share it, save it as a spreadsheet, rename, delete. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing) -> Unit) {
+fun ShelfScreen(shelf: Shelf, store: Store, api: ClApi, archive: Archive, onBack: () -> Unit, onOpen: (Listing) -> Unit) {
     val context = LocalContext.current
+    val recent by store.recent.collectAsStateWithLifecycle()
+    val status by store.status.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var checking by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf<String?>(null) }
     val favorites by store.favorites.collectAsStateWithLifecycle()
     val noted by store.noted.collectAsStateWithLifecycle()
     val lists by store.lists.collectAsStateWithLifecycle()
@@ -214,12 +229,39 @@ fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing
     val name = when (shelf) {
         Shelf.Favorites -> "Favorites"
         Shelf.Noted -> "With notes"
+        Shelf.Recent -> "Recently viewed"
         is Shelf.Custom -> custom?.name ?: ""
     }
     val items = when (shelf) {
         Shelf.Favorites -> favorites
         Shelf.Noted -> noted
+        Shelf.Recent -> recent
         is Shelf.Custom -> custom?.items.orEmpty()
+    }
+    /**
+     * Asks the site about every listing here, one at a time with a pause between, and marks the
+     * ones that are gone or repriced. Started by pulling down; never runs by itself.
+     */
+    fun checkAll() {
+        if (checking) return
+        checking = true
+        scope.launch {
+            val todo = items.take(80)
+            var gone = 0
+            var repriced = 0
+            for ((i, l) in todo.withIndex()) {
+                progress = "Checking ${i + 1} of ${todo.size}"
+                val found = archive.check(l, api) ?: continue
+                store.setStatus(l.postingId, found)
+                if (found.gone) gone++ else if (found.priceWas != null) repriced++
+                delay(350)
+            }
+            progress = when {
+                gone == 0 && repriced == 0 -> "All still listed, no price changes."
+                else -> listOfNotNull("$gone gone".takeIf { gone > 0 }, "$repriced repriced".takeIf { repriced > 0 }).joinToString(", ") + "."
+            }
+            checking = false
+        }
     }
     var menu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
@@ -243,6 +285,7 @@ fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing
                         IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(text = { Text("Save as spreadsheet (CSV)") }, enabled = items.isNotEmpty(), onClick = { menu = false; saveCsv.launch(Export.fileName(name)) })
+                            if (shelf == Shelf.Recent) DropdownMenuItem(text = { Text("Clear") }, onClick = { menu = false; store.clearRecent() })
                             if (custom != null) {
                                 DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; renaming = true })
                                 DropdownMenuItem(text = { Text("Delete list") }, onClick = { menu = false; deleting = true })
@@ -259,15 +302,17 @@ fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing
                     when (shelf) {
                         Shelf.Favorites -> "Tap the heart on a listing to keep it here."
                         Shelf.Noted -> "Write a note on any listing and it shows up here, hearted or not."
+                        Shelf.Recent -> "Listings you open show up here."
                         is Shelf.Custom -> "Open a listing and tap the list button at the top to add it here."
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
                 )
             }
-        } else LazyColumn(contentPadding = pad) {
+        } else RefreshBox(isRefreshing = checking, onRefresh = ::checkAll, modifier = Modifier.fillMaxSize().padding(top = pad.calculateTopPadding())) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = pad.calculateBottomPadding() + 16.dp)) {
             item {
                 Text(
-                    "Press and hold a listing to put it in other lists or take it out of this one.",
+                    progress ?: "Pull down to check which are still listed and whether prices changed. Press and hold a listing to change its lists.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
                 )
@@ -275,11 +320,12 @@ fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing
             items(items, key = { it.postingId }) { l ->
                 ListingRow(
                     l, favorite = l.postingId in favoriteIds, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) },
-                    note = notes[l.postingId], modifier = Modifier.animateItem(),
+                    note = notes[l.postingId], modifier = Modifier.animateItem(), status = status[l.postingId],
                     // Press and hold to choose which lists it belongs in: move it, copy it, or take it out.
                     onLongClick = { moving = l },
                 )
             }
+        }
         }
     }
     if (renaming && custom != null) NameDialog("Rename list", custom.name, "Rename", onDismiss = { renaming = false }) { store.renameList(custom.id, it); renaming = false }

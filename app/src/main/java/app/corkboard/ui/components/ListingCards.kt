@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import app.corkboard.data.Images
 import app.corkboard.data.Listing
+import app.corkboard.data.ListingStatus
 import app.corkboard.data.Units
 import app.corkboard.ui.Format
 import app.corkboard.ui.theme.PriceFont
@@ -72,9 +73,16 @@ private fun Heart(on: Boolean, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-private fun Caption(listing: Listing, units: Units, note: String?) {
-    val price = Format.price(listing)
+private fun Caption(listing: Listing, units: Units, note: String?, status: ListingStatus? = null) {
+    val price = status?.priceNow ?: Format.price(listing)
+    if (status?.gone == true) Text(
+        "No longer listed",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onErrorContainer,
+        modifier = Modifier.padding(bottom = 2.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.errorContainer).padding(horizontal = 8.dp, vertical = 2.dp),
+    )
     if (price != null) Text(price, style = MaterialTheme.typography.titleLarge, fontFamily = PriceFont)
+    status?.priceWas?.let { Text("was $it", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary) }
     Text(listing.title.orEmpty(), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
     val facts = Format.facts(listing, units)
     if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -108,13 +116,13 @@ fun ListingTile(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavo
 
 /** A result as a compact row: more per screen, for categories where the title matters most. */
 @Composable
-fun ListingRow(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavorite: () -> Unit, modifier: Modifier = Modifier, units: Units = Units(), note: String? = null, onLongClick: (() -> Unit)? = null) {
+fun ListingRow(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavorite: () -> Unit, modifier: Modifier = Modifier, units: Units = Units(), note: String? = null, onLongClick: (() -> Unit)? = null, status: ListingStatus? = null) {
     Row(modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box {
             Photo(listing, Modifier.size(104.dp).clip(RoundedCornerShape(20.dp)))
         }
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) { Caption(listing, units, note) }
+        Column(Modifier.weight(1f)) { Caption(listing, units, note, status) }
         Icon(
             if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
             if (favorite) "Remove from favorites" else "Add to favorites",

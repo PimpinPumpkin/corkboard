@@ -90,6 +90,7 @@ import app.corkboard.data.ClApi
 import app.corkboard.data.ClUrls
 import app.corkboard.data.Images
 import app.corkboard.data.Listing
+import app.corkboard.data.ListingStatus
 import app.corkboard.data.Posting
 import app.corkboard.data.Store
 import app.corkboard.ui.Format
@@ -170,6 +171,9 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
             gone = false
             offline = false
             posting = fresh
+            val seen = opened.copy(postingId = fresh.postingId, postedAt = fresh.postedAt, title = fresh.title, priceText = fresh.priceText, imageIds = fresh.imageIds, place = fresh.place, lat = fresh.lat, lon = fresh.lon)
+            store.addRecent(seen)
+            store.setStatus(fresh.postingId, ListingStatus(priceNow = fresh.priceText, priceWas = snapshot?.priceWas?.takeIf { it != fresh.priceText }, checkedAt = System.currentTimeMillis() / 1000))
             // The same thing posted again: bring the heart, note and lists over from the old one.
             fresh.repostOf?.let { old ->
                 store.carryOver(old, opened.copy(postingId = fresh.postingId, postedAt = fresh.postedAt, title = fresh.title, priceText = fresh.priceText, imageIds = fresh.imageIds, place = fresh.place, lat = fresh.lat, lon = fresh.lon))
@@ -185,6 +189,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                 gone = e is GoneException
                 offline = !gone
                 posting = old
+                if (gone) store.setStatus(old.postingId, ListingStatus(gone = true, priceNow = old.priceText, checkedAt = System.currentTimeMillis() / 1000))
             } else {
                 error = e.message ?: "Could not load this listing"
             }

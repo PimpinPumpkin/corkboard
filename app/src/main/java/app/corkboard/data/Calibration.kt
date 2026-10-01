@@ -10,7 +10,9 @@ import kotlinx.serialization.json.Json
  * `version` is higher than the one in hand.
  *
  * It can only retune what is here. It cannot point the app at another host or run anything; a
- * file with values outside the sane ranges below is ignored whole.
+ * file with values outside the sane ranges below is ignored whole. And it has to be signed: the
+ * app carries the public half of a key whose private half never leaves the maintainer's machine,
+ * so nobody who merely gets into the repository or between it and the phone can change it.
  */
 @Serializable
 data class Calibration(
@@ -37,13 +39,37 @@ data class Calibration(
 
     companion object {
         const val URL = "https://raw.githubusercontent.com/PimpinPumpkin/corkboard/main/calibration.json"
+        const val SIGNATURE_URL = "$URL.sig"
+
+        /** The public half of the calibration key: EC P-256, as base64 of its standard encoding. */
+        const val PUBLIC_KEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEBQqKpQz49lbQjL5Phbc37BMnJwMYogdM/EvibWdKkjpHC3n2EpRRk8X9c3Ivm8sUvzWVINTnlaUN5p/3hOU3kA=="
+
+        /** Whether [signature] (base64) is this project's signature over exactly [text]. Any error is a no. */
+        fun verified(text: String, signature: String, publicKey: String = PUBLIC_KEY): Boolean = runCatching {
+            val key = java.security.KeyFactory.getInstance("EC")
+                .generatePublic(java.security.spec.X509EncodedKeySpec(java.util.Base64.getDecoder().decode(publicKey)))
+            java.security.Signature.getInstance("SHA256withECDSA").run {
+                initVerify(key)
+                update(text.toByteArray(Charsets.UTF_8))
+                verify(java.util.Base64.getDecoder().decode(signature.trim()))
+            }
+        }.getOrDefault(false)
         private val json = Json { ignoreUnknownKeys = true }
 
         @Volatile var current: Calibration = Calibration()
             private set
 
-        /** Takes [text] as the calibration in force if it parses, is sane, and is newer. Returns whether it did. */
-        fun adopt(text: String): Boolean {
+        /**
+         * Takes [text] as the calibration in force if it is signed, parses, is sane, and is newer.
+         * Returns whether it did.
+         */
+        fun adopt(text: String, signature: String?, publicKey: String = PUBLIC_KEY): Boolean {
+            if (signature == null || !verified(text, signature, publicKey)) return false
+            return adoptUnsigned(text)
+        }
+
+        /** For tests of everything but the signature. The app itself only calls [adopt]. */
+        internal fun adoptUnsigned(text: String): Boolean {
             val c = runCatching { json.decodeFromString(serializer(), text) }.getOrNull() ?: return false
             if (!c.sane() || c.version <= current.version) return false
             current = c

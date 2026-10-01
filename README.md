@@ -32,6 +32,8 @@ Android 10 or later. Tap a button, install, done. No account.
 - **Hide listings** you have seen enough of.
 - **Back up and restore** everything to one file, and import a list from a spreadsheet.
 - **Deleted listings stay readable**, and a changed price shows what it was.
+- **Check a whole list at once.** Pull down on any list to see which listings are gone or repriced.
+- **Recently viewed**, so the one you closed is easy to find again.
 - **See when a seller edits a listing.**
 - **Saved searches with alerts**, checked by the phone itself.
 - **Pin your categories** to the home screen.
@@ -135,7 +137,7 @@ settings file kept in this repository.
 | First launch | **craigslist**, once, to learn which site is nearest your network address |
 | Tap "Use my location" | **craigslist**, with coordinates rounded to about a kilometer. Only when you tap it |
 | Heart, hide, note, add to a list, save a search | **Nobody.** It stays in the app's private storage |
-| Once a day, in the background | **GitHub**, for a small settings file from this repository that lets a craigslist change be fixed without an app update. It says nothing about you |
+| Once a day, in the background | **GitHub**, for a small signed settings file from this repository that lets a craigslist change be fixed without an app update. It says nothing about you |
 | Saved-search alerts | **craigslist**, the same search a few times a day. No push service in between |
 | Reply to a listing | **Your browser** takes over |
 

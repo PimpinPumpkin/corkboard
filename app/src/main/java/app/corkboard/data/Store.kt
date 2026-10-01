@@ -24,6 +24,10 @@ data class SavedSearch(
     val title: String get() = name?.takeIf { it.isNotBlank() } ?: query.text.ifEmpty { query.categoryName }
 }
 
+/** What the app last learned about a kept listing: whether it is still up, and what its price did. */
+@Serializable
+data class ListingStatus(val gone: Boolean = false, val priceNow: String? = null, val priceWas: String? = null, val checkedAt: Long = 0)
+
 enum class ThemeMode { System, Light, Dark }
 
 /**
@@ -287,6 +291,39 @@ class Store(context: Context) {
             setNote(Listing(postingId = oldId, postedAt = 0, categoryId = 0), "")
         }
         if (oldId in _hidden.value) setHidden(new.postingId, true)
+    }
+
+    // ---- recently viewed, and what is known about each listing ----
+
+    private val _recent = MutableStateFlow(read("recent.json", ListSerializer(Listing.serializer())).orEmpty())
+
+    /** The last listings opened, newest first. */
+    val recent: StateFlow<List<Listing>> = _recent.asStateFlow()
+
+    fun addRecent(listing: Listing) {
+        if (listing.postingId == 0L) return
+        val next = (listOf(listing) + _recent.value.filter { it.postingId != listing.postingId }).take(60)
+        write("recent.json", ListSerializer(Listing.serializer()), next)
+        _recent.value = next
+    }
+
+    fun clearRecent() {
+        write("recent.json", ListSerializer(Listing.serializer()), emptyList())
+        _recent.value = emptyList()
+    }
+
+    private val statusSerializer = kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.serializer<Long>(), ListingStatus.serializer())
+    private val _status = MutableStateFlow(read("status.json", statusSerializer).orEmpty())
+
+    /** Gone or repriced, by posting id, as of the last time each listing was opened or checked. */
+    val status: StateFlow<Map<Long, ListingStatus>> = _status.asStateFlow()
+
+    fun setStatus(postingId: Long, status: ListingStatus) {
+        if (postingId == 0L) return
+        // Only the newest few hundred are worth remembering; older listings have long expired.
+        val next = (_status.value + (postingId to status)).entries.sortedByDescending { it.value.checkedAt }.take(500).associate { it.key to it.value }
+        write("status.json", statusSerializer, next)
+        _status.value = next
     }
 
     // ---- notes ----

@@ -176,7 +176,7 @@ class MainActivity : ComponentActivity() {
                                 onDone = { if (stack.last() == Screen.Areas) pop() },
                             )
                             Screen.Favorites -> ListsScreen(app.store, onBack = ::pop, onOpen = { stack += Screen.ShelfOf(it) })
-                            is Screen.ShelfOf -> ShelfScreen(screen.shelf, app.store, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
+                            is Screen.ShelfOf -> ShelfScreen(screen.shelf, app.store, app.api, app.archive, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
                             Screen.Saved -> SavedScreen(app.store, onBack = ::pop, onOpen = ::open)
                             Screen.Settings -> SettingsScreen(app.store, app.http, onBack = ::pop)
                             is Screen.Results -> ResultsScreen(screen.state, app.api, app.store, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
