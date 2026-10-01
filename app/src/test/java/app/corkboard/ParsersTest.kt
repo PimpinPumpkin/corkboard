@@ -177,6 +177,11 @@ class ParsersTest {
     }
 
     @Test
+    fun `shouted descriptions are brought down to reading size`() {
+        assertEquals("<b>Sunset Kia</b><br>Call now<br><b>ok</b>", app.corkboard.ui.Format.bodyHtml("<h1 style=\"x\">Sunset Kia</h1><big>Call now</big><br><b>ok</b>"))
+    }
+
+    @Test
     fun `image ids become urls`() {
         assertEquals("https://images.craigslist.org/00w0w_TqEQX1TUvp_0ny0hJ_600x450.jpg", Images.url("3:00w0w_TqEQX1TUvp_0ny0hJ", Images.MEDIUM))
     }

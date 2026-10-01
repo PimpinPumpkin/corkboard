@@ -88,6 +88,7 @@ import app.corkboard.ui.Format
 import app.corkboard.ui.ResultsState
 import app.corkboard.ui.components.ListingRow
 import app.corkboard.ui.components.ListingTile
+import app.corkboard.ui.components.SearchPill
 import app.corkboard.work.Alerts
 import kotlinx.coroutines.launch
 
@@ -188,22 +189,16 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
                         }
                     },
                 )
-                OutlinedTextField(
+                SearchPill(
                     value = text,
                     onValueChange = { text = it },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    placeholder = { Text("Search ${query.categoryName.lowercase()}") },
-                    leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                    trailingIcon = {
-                        if (text.isNotEmpty()) IconButton(onClick = { text = ""; if (query.text.isNotEmpty()) state.run(query.with("query", emptyList())) }) { Icon(Icons.Outlined.Close, "Clear") }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(28.dp),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { focus.clearFocus(); state.run(query.with("query", listOf(text.trim()))) }),
+                    placeholder = "Search ${query.categoryName.lowercase()}",
+                    onSearch = { focus.clearFocus(); state.run(query.with("query", listOf(text.trim()))) },
+                    onClear = { if (query.text.isNotEmpty()) state.run(query.with("query", emptyList())) },
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
                 Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FilterChip(

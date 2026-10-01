@@ -50,7 +50,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -84,6 +85,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import app.corkboard.data.Attribute
 import app.corkboard.data.ClApi
 import app.corkboard.data.ClUrls
 import app.corkboard.data.Images
@@ -92,6 +94,8 @@ import app.corkboard.data.Posting
 import app.corkboard.data.Store
 import app.corkboard.ui.Format
 import app.corkboard.ui.components.MiniMap
+import app.corkboard.ui.components.Panel
+import app.corkboard.ui.theme.PriceFont
 import kotlinx.coroutines.CancellationException
 
 private fun openInBrowser(context: Context, url: String) {
@@ -163,14 +167,14 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
             )
         },
         bottomBar = {
-            Surface(tonalElevation = 2.dp) {
-                Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(color = MaterialTheme.colorScheme.surface) {
+                Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     // Replying means solving the site's own check and seeing the seller's contact
                     // details, which belongs in a real browser.
-                    Button(onClick = { webUrl?.let { openInBrowser(context, it) } }, enabled = webUrl != null, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.AutoMirrored.Outlined.Reply, null, Modifier.size(18.dp))
-                        Spacer(Modifier.size(8.dp))
-                        Text("Reply on craigslist")
+                    Button(onClick = { webUrl?.let { openInBrowser(context, it) } }, enabled = webUrl != null, modifier = Modifier.weight(1f).height(60.dp), shape = RoundedCornerShape(24.dp)) {
+                        Icon(Icons.AutoMirrored.Outlined.Reply, null, Modifier.size(22.dp))
+                        Spacer(Modifier.size(10.dp))
+                        Text("Reply on craigslist", style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }
@@ -178,13 +182,13 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())) {
             if (imageIds.isNotEmpty()) Gallery(imageIds, onOpen = { viewer = it })
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                if (price != null) Text(price, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-                SelectionContainer { Text(title, style = MaterialTheme.typography.titleLarge) }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
+                if (price != null) Text(price, style = MaterialTheme.typography.displaySmall, fontFamily = PriceFont)
+                SelectionContainer { Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 2.dp)) }
                 val postedAt = p?.postedAt ?: listing.postedAt
-                // Only a real edit counts. The site stamps every listing "updated" a second after it
-                // is posted, which says nothing; a minute or more later means the seller changed it.
-                val updated = p?.updatedAt?.takeIf { it >= postedAt + 60 }
+                // Only a real edit or renewal counts. An untouched listing carries an updated time
+                // equal to its posted time, or one second after it; anything later is the seller's doing.
+                val updated = p?.updatedAt?.takeIf { it > postedAt + 1 }
                 Text(
                     listOfNotNull(
                         (p?.place?.takeIf { it.isNotBlank() } ?: listing.place).takeIf { it.isNotBlank() },
@@ -194,30 +198,55 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = 6.dp),
                 )
                 // The user's own note about this listing. Saved as it is typed; never leaves the phone.
                 val notes by store.notes.collectAsStateWithLifecycle()
                 var note by remember(listing.postingId) { mutableStateOf(notes[listing.postingId].orEmpty()) }
-                OutlinedTextField(
+                TextField(
                     value = note,
                     onValueChange = { note = it.take(2000); store.setNote(listing, note) },
                     enabled = listing.postingId != 0L,
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                    label = { Text("Your note") },
-                    placeholder = { Text("Asked about the timing belt, offered 4,200...") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+                    placeholder = { Text("Your note") },
                     leadingIcon = { Icon(Icons.Outlined.EditNote, null) },
                     maxLines = 6,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                    ),
                 )
                 when {
                     p != null -> {
                         if (p.attributes.isNotEmpty()) {
-                            Spacer(Modifier.height(16.dp))
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                p.attributes.forEach { a ->
-                                    Column(Modifier.clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                                        if (a.label.isNotEmpty()) Text(a.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text(a.value, style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.height(12.dp))
+                            // Facts in two columns, label over value, the way a spec sheet reads.
+                            Panel {
+                                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                                    // Long values such as a VIN get a row to themselves instead of wrapping.
+                                    val rows = buildList<List<Attribute>> {
+                                        var open: Attribute? = null
+                                        for (a in p.attributes) {
+                                            if (a.value.length > 16) { add(listOf(a)); continue }
+                                            open = if (open == null) a else { add(listOf(open, a)); null }
+                                        }
+                                        open?.let { add(listOf(it)) }
+                                    }
+                                    rows.forEach { pair ->
+                                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                                            pair.forEach { a ->
+                                                Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                                                    if (a.label.isNotEmpty()) Text(a.label.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    SelectionContainer { Text(a.value, style = MaterialTheme.typography.bodyLarge) }
+                                                }
+                                            }
+                                            if (pair.size == 1 && pair[0].value.length <= 16) Spacer(Modifier.weight(1f))
+                                        }
                                     }
                                 }
                             }
@@ -226,19 +255,19 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                         val lat = p.lat ?: listing.lat
                         val lon = p.lon ?: listing.lon
                         if (lat != null && lon != null && (lat != 0.0 || lon != 0.0)) {
-                            Spacer(Modifier.height(20.dp))
+                            Spacer(Modifier.height(12.dp))
                             MiniMap(lat, lon, onOpen = {
                                 // A maps app if the phone has one; otherwise OpenStreetMap in the browser.
                                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lon?q=$lat,$lon"))) }
                                     .onFailure { openInBrowser(context, "https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=14/$lat/$lon") }
                             })
                         }
-                        Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(12.dp))
                         val link = MaterialTheme.colorScheme.primary
                         val body = remember(p.bodyHtml, link) {
-                            AnnotatedString.fromHtml(p.bodyHtml, linkStyles = TextLinkStyles(SpanStyle(color = link, textDecoration = TextDecoration.Underline)))
+                            AnnotatedString.fromHtml(Format.bodyHtml(p.bodyHtml), linkStyles = TextLinkStyles(SpanStyle(color = link, textDecoration = TextDecoration.Underline)))
                         }
-                        SelectionContainer { Text(body, style = MaterialTheme.typography.bodyLarge) }
+                        Panel { SelectionContainer { Text(body, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(20.dp)) } }
                         p.notices.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp)) }
                         Text(
                             listOfNotNull(
@@ -249,7 +278,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                             ).joinToString("\n"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 20.dp),
+                            modifier = Modifier.padding(top = 20.dp, start = 4.dp),
                         )
                     }
                     error != null -> Column(Modifier.fillMaxWidth().padding(top = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -269,7 +298,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
 private fun Gallery(imageIds: List<String>, onOpen: (Int) -> Unit) {
     val pager = rememberPagerState { imageIds.size }
     Box {
-        HorizontalPager(pager, Modifier.fillMaxWidth().aspectRatio(4f / 3f).background(MaterialTheme.colorScheme.surfaceContainerHigh)) { i ->
+        HorizontalPager(pager, Modifier.fillMaxWidth().padding(horizontal = 12.dp).aspectRatio(4f / 3f).clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) { i ->
             AsyncImage(
                 model = Images.url(imageIds[i], Images.MEDIUM),
                 contentDescription = "Photo ${i + 1} of ${imageIds.size}",
@@ -281,7 +310,7 @@ private fun Gallery(imageIds: List<String>, onOpen: (Int) -> Unit) {
             "${pager.currentPage + 1} / ${imageIds.size}",
             color = Color.White,
             style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 10.dp, vertical = 4.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 24.dp, bottom = 12.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
 }

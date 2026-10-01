@@ -1,6 +1,9 @@
 package app.corkboard.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,7 +53,7 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())) {
             Heading("Theme")
             listOf(ThemeMode.System to "Follow the system", ThemeMode.Light to "Light", ThemeMode.Dark to "Dark").forEach { (mode, label) ->
-                Row(Modifier.fillMaxWidth().clickable { store.setTheme(mode) }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clickable { store.setTheme(mode) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = theme == mode, onClick = { store.setTheme(mode) })
                     Text(label, style = MaterialTheme.typography.bodyLarge)
                 }
@@ -107,6 +110,7 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
                 "An independent client for craigslist. Not affiliated with or endorsed by craigslist. " +
                     "It talks to craigslist directly from this phone; there is no Corkboard server and nothing is collected. " +
                     "Free software under the GNU GPL v3. Includes Cronet from the Chromium project (BSD license), " +
+                    "the Google Sans Flex typeface (SIL Open Font License), " +
                     "Coil, AndroidX and Kotlin libraries (Apache 2.0).",
             ) {}
         }
@@ -115,12 +119,15 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
 
 @Composable
 private fun Heading(text: String) {
-    Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp))
+    Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 10.dp))
 }
 
 @Composable
 private fun Item(title: String, detail: String, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp)) {
+    Column(
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 16.dp),
+    ) {
         Text(title, style = MaterialTheme.typography.bodyLarge)
         Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

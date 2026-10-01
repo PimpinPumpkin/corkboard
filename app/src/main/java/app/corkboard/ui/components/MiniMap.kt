@@ -84,7 +84,7 @@ fun MiniMap(lat: Double, lon: Double, onOpen: () -> Unit, modifier: Modifier = M
     }
 
     BoxWithConstraints(
-        modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
+        modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .pointerInput(lat, lon) {
                 detectTransformGestures { _, pan, change, _ ->
                     zoomBy(change)

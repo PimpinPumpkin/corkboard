@@ -10,7 +10,16 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
+import app.corkboard.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import app.corkboard.data.ThemeMode
@@ -64,6 +73,51 @@ private val DarkFallback = darkColorScheme(
     outlineVariant = Color(0xFF51443A),
 )
 
+@OptIn(ExperimentalTextApi::class)
+private fun flex(weight: Int, round: Float): FontFamily = FontFamily(
+    Font(
+        R.font.google_sans_flex,
+        weight = FontWeight(weight),
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(weight),
+            // Roundness axis: 100 is the soft, friendly cut Material 3 Expressive uses for big type.
+            FontVariation.Setting("ROND", round),
+        ),
+    ),
+)
+
+private val DisplayRegular = flex(400, 100f)
+private val DisplayMedium = flex(500, 100f)
+private val TextRegular = flex(400, 0f)
+private val TextMedium = flex(500, 0f)
+
+/** Prices and other figures that should stand out: heavy, round, and the same in every screen. */
+val PriceFont: FontFamily = flex(650, 100f)
+
+/** One typeface throughout: round for headings and titles, plain for reading text. */
+private fun typography(): Typography {
+    val base = Typography()
+    fun TextStyle.display(medium: Boolean = false) = copy(fontFamily = if (medium) DisplayMedium else DisplayRegular, fontWeight = FontWeight(if (medium) 500 else 400))
+    fun TextStyle.text(medium: Boolean = false) = copy(fontFamily = if (medium) TextMedium else TextRegular, fontWeight = FontWeight(if (medium) 500 else 400))
+    return Typography(
+        displayLarge = base.displayLarge.display(),
+        displayMedium = base.displayMedium.display(),
+        displaySmall = base.displaySmall.display(),
+        headlineLarge = base.headlineLarge.display(),
+        headlineMedium = base.headlineMedium.display(),
+        headlineSmall = base.headlineSmall.display(),
+        titleLarge = base.titleLarge.display(),
+        titleMedium = base.titleMedium.display(medium = true),
+        titleSmall = base.titleSmall.display(medium = true),
+        bodyLarge = base.bodyLarge.text(),
+        bodyMedium = base.bodyMedium.text(),
+        bodySmall = base.bodySmall.text(),
+        labelLarge = base.labelLarge.text(medium = true),
+        labelMedium = base.labelMedium.text(medium = true),
+        labelSmall = base.labelSmall.text(medium = true),
+    )
+}
+
 @Composable
 fun isDark(mode: ThemeMode): Boolean = when (mode) {
     ThemeMode.System -> isSystemInDarkTheme()
@@ -80,5 +134,5 @@ fun CorkboardTheme(dark: Boolean, content: @Composable () -> Unit) {
         dark -> DarkFallback
         else -> LightFallback
     }
-    MaterialExpressiveTheme(colorScheme = scheme, motionScheme = MotionScheme.expressive(), content = content)
+    MaterialExpressiveTheme(colorScheme = scheme, motionScheme = MotionScheme.expressive(), typography = remember { typography() }, content = content)
 }

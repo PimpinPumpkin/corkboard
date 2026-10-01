@@ -73,4 +73,6 @@ update.
 
 ## License
 
-GPL-3.0. Cronet is from the Chromium project under its BSD license.
+GPL-3.0. Cronet is from the Chromium project under its BSD license. The typeface is
+[Google Sans Flex](https://fonts.google.com/specimen/Google+Sans+Flex), OFL 1.1, see
+[licenses/](licenses/GoogleSansFlex-OFL.txt).

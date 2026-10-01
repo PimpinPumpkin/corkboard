@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,6 +55,7 @@ import app.corkboard.data.DeviceLocation
 import app.corkboard.data.Located
 import app.corkboard.data.Near
 import app.corkboard.data.Store
+import app.corkboard.ui.components.SearchPill
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -158,7 +160,7 @@ fun AreaScreen(api: ClApi, store: Store, canGoBack: Boolean, onDone: () -> Unit)
             else -> LazyColumn(contentPadding = PaddingValues(top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding() + 16.dp)) {
                 item {
                     Column(Modifier.padding(horizontal = 16.dp)) {
-                        FilledTonalButton(onClick = { askLocation.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                        FilledTonalButton(onClick = { askLocation.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                             if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Icon(Icons.Outlined.MyLocation, null, Modifier.size(18.dp))
                             Spacer(Modifier.size(8.dp))
                             Text("Use my location")
@@ -202,19 +204,10 @@ fun AreaScreen(api: ClApi, store: Store, canGoBack: Boolean, onDone: () -> Unit)
                         note?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp)) }
                         Text(
                             "Or pick a whole area",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(top = 28.dp, bottom = 10.dp, start = 4.dp),
                         )
-                        OutlinedTextField(
-                            value = filter,
-                            onValueChange = { filter = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("City, region or state code") },
-                            leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                            singleLine = true,
-                            shape = RoundedCornerShape(28.dp),
-                        )
+                        SearchPill(value = filter, onValueChange = { filter = it }, placeholder = "City, region or state code", onSearch = {})
                     }
                 }
                 items(shown, key = { it.id }) { area -> AreaRow(area) { store.setArea(area); onDone() } }

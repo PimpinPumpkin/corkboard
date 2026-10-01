@@ -29,6 +29,15 @@ object Format {
         return SimpleDateFormat(if (sameYear) "MMM d, h:mm a" else "MMM d yyyy, h:mm a", Locale.US).format(d)
     }
 
+    /**
+     * A listing's description, calmed down for reading: headings and oversized text become bold
+     * lines at the normal size. Sellers shout in <h1>, and at one line height that overlaps itself.
+     */
+    fun bodyHtml(html: String): String = html
+        .replace(Regex("<h[1-6][^>]*>", RegexOption.IGNORE_CASE), "<b>")
+        .replace(Regex("</h[1-6]>", RegexOption.IGNORE_CASE), "</b><br>")
+        .replace(Regex("</?(big|small|font)[^>]*>", RegexOption.IGNORE_CASE), "")
+
     /** The site formats prices itself, in the area's currency; the bare number is only a fallback. */
     fun price(l: Listing): String? = l.priceText ?: l.price?.let { NumberFormat.getIntegerInstance().format(it) }
 

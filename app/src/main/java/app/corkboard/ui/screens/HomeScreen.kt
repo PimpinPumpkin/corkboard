@@ -1,6 +1,14 @@
 package app.corkboard.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import app.corkboard.ui.components.Panel
+import app.corkboard.ui.components.SearchPill
+import app.corkboard.ui.components.SectionTitle
+import app.corkboard.ui.components.TonalIcon
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.clip
@@ -127,51 +135,40 @@ fun HomeScreen(
         params = if (search.isBlank()) emptyMap() else mapOf("query" to listOf(search.trim())),
     ).near(near?.postal, near?.distance)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Corkboard") },
-                actions = {
-                    IconButton(onClick = onSaved) {
-                        BadgedBox(badge = { if (unseen > 0) Badge { Text(if (unseen > 99) "99+" else "$unseen") } }) {
-                            Icon(Icons.Outlined.BookmarkBorder, "Saved searches")
-                        }
-                    }
-                    IconButton(onClick = onFavorites) { Icon(Icons.Outlined.FavoriteBorder, "Favorites") }
-                    IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, "Settings") }
-                },
-            )
-        },
-    ) { pad ->
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding() + 24.dp)) {
+    Scaffold { pad ->
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = pad.calculateTopPadding() + 12.dp, bottom = pad.calculateBottomPadding() + 32.dp)) {
             item {
-                AssistChip(
-                    onClick = onPickArea,
-                    label = {
-                        val n = near
-                        Text(
-                            if (n == null) area.name else "${n.distance} ${area.distanceUnit} of ${n.city.ifEmpty { n.postal }} · ${area.name}",
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    leadingIcon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(18.dp)) },
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
+                SearchPill(
                     value = text,
                     onValueChange = { text = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search everything for sale") },
-                    leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(28.dp),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { if (text.isNotBlank()) onSearch(query(Catalog.forSale.all, text)) }),
+                    placeholder = "Search craigslist",
+                    onSearch = { if (text.isNotBlank()) onSearch(query(Catalog.forSale.all, text)) },
+                    trailing = { IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant) } },
                 )
-                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Where every search from this screen looks. Tapping it changes the place.
+                    Row(
+                        Modifier.weight(1f).heightIn(min = 44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer).clickable(onClick = onPickArea).padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.LocationOn, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                        val n = near
+                        Text(
+                            if (n == null) area.name else "${n.distance} ${area.distanceUnit} of ${n.city.ifEmpty { n.postal }}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                    BadgedBox(badge = { if (unseen > 0) Badge { Text(if (unseen > 99) "99+" else "$unseen") } }) {
+                        TonalIcon(Icons.Outlined.BookmarkBorder, "Saved searches", onSaved)
+                    }
+                    TonalIcon(Icons.Outlined.FavoriteBorder, "Favorites", onFavorites)
+                }
             }
             if (saved.isNotEmpty()) item {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     saved.forEach { s ->
                         AssistChip(
                             onClick = { onSearch(s.query) },
@@ -181,32 +178,42 @@ fun HomeScreen(
                     }
                 }
             }
+            item { Spacer(Modifier.height(20.dp)) }
             items(pinned.chunked(2)) { pair ->
-                Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     pair.forEach { c -> FeaturedTile(c, Modifier.weight(1f), onLongClick = { store.togglePinned(c.abbr) }) { onSearch(query(c)) } }
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            item {
-                Text(
-                    "Press and hold a category to pin or unpin it.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
             Catalog.sections.forEach { section ->
                 val collapsible = section === Catalog.forSale
                 val shown = if (collapsible && !expanded) section.categories.filter { it.abbr !in pinnedAbbrs }.take(8) else section.categories
-                item { SectionHeader(section, onAll = if (section === Catalog.more) null else ({ onSearch(query(section.all)) })) }
-                items(shown, key = { section.name + it.abbr }) { c -> CategoryRow(c, c.abbr in pinnedAbbrs, onLongClick = { store.togglePinned(c.abbr) }) { onSearch(query(c)) } }
-                if (collapsible) item {
-                    TextButton(onClick = { expanded = !expanded }) {
-                        Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
-                        Spacer(Modifier.width(4.dp))
-                        Text(if (expanded) "Show fewer" else "Show all ${section.categories.size} categories")
+                item(key = section.name) {
+                    SectionTitle(section.name) {
+                        if (section !== Catalog.more) TextButton(onClick = { onSearch(query(section.all)) }) { Text("See all") }
+                    }
+                    Panel {
+                        shown.forEach { c -> CategoryRow(c, c.abbr in pinnedAbbrs, onLongClick = { store.togglePinned(c.abbr) }) { onSearch(query(c)) } }
+                        if (collapsible) Row(
+                            Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(horizontal = 20.dp, vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                if (expanded) "Show fewer" else "Show all ${section.categories.size} categories",
+                                style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f),
+                            )
+                            Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
+            }
+            item {
+                Text(
+                    "Press and hold a category to pin it to the top, or to unpin it.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 16.dp, start = 4.dp),
+                )
             }
         }
     }
@@ -214,31 +221,22 @@ fun HomeScreen(
 
 @Composable
 private fun FeaturedTile(c: Category, modifier: Modifier, onLongClick: () -> Unit, onClick: () -> Unit) {
-    Card(
-        modifier = modifier.clip(RoundedCornerShape(20.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer),
-        shape = RoundedCornerShape(20.dp),
+    Column(
+        modifier.clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(16.dp),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Icon(featuredIcons[c.abbr] ?: Icons.Outlined.PushPin, null, Modifier.size(28.dp))
-            Spacer(Modifier.height(12.dp))
-            Text(c.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+            Icon(featuredIcons[c.abbr] ?: Icons.Outlined.PushPin, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
-    }
-}
-
-@Composable
-private fun SectionHeader(section: Section, onAll: (() -> Unit)?) {
-    Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(section.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        if (onAll != null) TextButton(onClick = onAll) { Text("See all") }
+        Spacer(Modifier.height(14.dp))
+        Text(c.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @Composable
 private fun CategoryRow(c: Category, pinned: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(vertical = 14.dp),
+        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(c.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))

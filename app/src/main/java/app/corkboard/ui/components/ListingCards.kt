@@ -36,6 +36,7 @@ import app.corkboard.data.Images
 import app.corkboard.data.Listing
 import app.corkboard.data.Units
 import app.corkboard.ui.Format
+import app.corkboard.ui.theme.PriceFont
 
 @Composable
 private fun Photo(listing: Listing, modifier: Modifier) {
@@ -67,7 +68,7 @@ private fun Heart(on: Boolean, modifier: Modifier, onClick: () -> Unit) {
 @Composable
 private fun Caption(listing: Listing, units: Units, note: String?) {
     val price = Format.price(listing)
-    if (price != null) Text(price, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    if (price != null) Text(price, style = MaterialTheme.typography.titleLarge, fontFamily = PriceFont)
     Text(listing.title.orEmpty(), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
     val facts = Format.facts(listing, units)
     if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -90,12 +91,12 @@ private fun Caption(listing: Listing, units: Units, note: String?) {
 /** A result as a photo-first tile, two to a row. */
 @Composable
 fun ListingTile(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavorite: () -> Unit, modifier: Modifier = Modifier, units: Units = Units(), note: String? = null, onLongClick: (() -> Unit)? = null) {
-    Column(modifier.clip(RoundedCornerShape(16.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
+    Column(modifier.clip(RoundedCornerShape(24.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         Box {
-            Photo(listing, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(16.dp)))
+            Photo(listing, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp)))
             Heart(favorite, Modifier.align(Alignment.TopEnd).padding(6.dp), onFavorite)
         }
-        Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) { Caption(listing, units, note) }
+        Column(Modifier.padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 10.dp)) { Caption(listing, units, note) }
     }
 }
 
@@ -104,7 +105,7 @@ fun ListingTile(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavo
 fun ListingRow(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavorite: () -> Unit, modifier: Modifier = Modifier, units: Units = Units(), note: String? = null, onLongClick: (() -> Unit)? = null) {
     Row(modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box {
-            Photo(listing, Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)))
+            Photo(listing, Modifier.size(104.dp).clip(RoundedCornerShape(20.dp)))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) { Caption(listing, units, note) }
