@@ -21,7 +21,8 @@ craigslist.
   The app's own buttons and menus are in English for now.
 - **Full listings**: photo gallery with pinch or double tap to zoom, attributes, description, map
   (your maps app, or OpenStreetMap in the browser if there is none).
-- **A map on the listing itself**, with no maps app needed, and when it was posted and last updated.
+- **A map on the listing itself** that you can drag and pinch, with no maps app needed, and when it
+  was posted and, if the seller has edited it since, when.
 - **Favorites, notes and hidden listings**, kept on the phone. Press and hold a result to hide it.
   Every listing with a note is kept under Saved listings, hearted or not.
 - **Opens craigslist links.** Share a listing link to Corkboard, or choose it under "Open with".

@@ -182,8 +182,9 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                 if (price != null) Text(price, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                 SelectionContainer { Text(title, style = MaterialTheme.typography.titleLarge) }
                 val postedAt = p?.postedAt ?: listing.postedAt
-                // Shown whenever the site has an updated time, the same as the site's own page does.
-                val updated = p?.updatedAt?.takeIf { it > 0 && it != postedAt }
+                // Only a real edit counts. The site stamps every listing "updated" a second after it
+                // is posted, which says nothing; a minute or more later means the seller changed it.
+                val updated = p?.updatedAt?.takeIf { it >= postedAt + 60 }
                 Text(
                     listOfNotNull(
                         (p?.place?.takeIf { it.isNotBlank() } ?: listing.place).takeIf { it.isNotBlank() },
@@ -226,7 +227,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                         val lon = p.lon ?: listing.lon
                         if (lat != null && lon != null && (lat != 0.0 || lon != 0.0)) {
                             Spacer(Modifier.height(20.dp))
-                            MiniMap(lat, lon, onClick = {
+                            MiniMap(lat, lon, onOpen = {
                                 // A maps app if the phone has one; otherwise OpenStreetMap in the browser.
                                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lon?q=$lat,$lon"))) }
                                     .onFailure { openInBrowser(context, "https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=14/$lat/$lon") }
