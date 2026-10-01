@@ -97,7 +97,7 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
             val hidden by store.hidden.collectAsStateWithLifecycle()
             Item(
                 if (hidden.isEmpty()) "Nothing hidden" else if (hidden.size == 1) "Show 1 hidden listing again" else "Show ${hidden.size} hidden listings again",
-                "Press and hold a listing in search results to hide it everywhere.",
+                "Press and hold a listing and choose Hide to keep it out of every search.",
             ) { store.unhideAll() }
 
             Heading("Backup")

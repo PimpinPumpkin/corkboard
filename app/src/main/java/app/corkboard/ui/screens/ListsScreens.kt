@@ -36,7 +36,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import app.corkboard.data.Archive
 import app.corkboard.data.ClApi
+import app.corkboard.data.ClUrls
 import app.corkboard.data.Export
+import app.corkboard.data.Units
+import app.corkboard.ui.components.ListingPeek
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 import app.corkboard.ui.components.RefreshBox
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.runtime.rememberCoroutineScope
@@ -267,6 +272,23 @@ fun ShelfScreen(shelf: Shelf, store: Store, api: ClApi, archive: Archive, onBack
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var moving by remember { mutableStateOf<Listing?>(null) }
+    var peeked by remember { mutableStateOf<Listing?>(null) }
+    val view = LocalView.current
+    peeked?.let { l ->
+        ListingPeek(
+            listing = l, favorite = l.postingId in favoriteIds, note = notes[l.postingId], units = Units(),
+            onDismiss = { peeked = null },
+            onOpen = { onOpen(l) },
+            onFavorite = { store.toggleFavorite(l) },
+            onLists = { moving = l },
+            onHide = { store.setHidden(l.postingId, true) },
+            onShare = {
+                l.uuid?.let { uuid ->
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, ClUrls.web(uuid, l.slug)).putExtra(Intent.EXTRA_SUBJECT, l.title), null))
+                }
+            },
+        )
+    }
     moving?.let { l -> ListPicker(l, store, onDismiss = { moving = null }) }
     val saveCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(Export.csv(items, notes).toByteArray()) } }
@@ -312,7 +334,7 @@ fun ShelfScreen(shelf: Shelf, store: Store, api: ClApi, archive: Archive, onBack
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = pad.calculateBottomPadding() + 16.dp)) {
             item {
                 Text(
-                    progress ?: "Pull down to check which are still listed and whether prices changed. Press and hold a listing to change its lists.",
+                    progress ?: "Pull down to check which are still listed and whether prices changed. Press and hold a listing for more.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
                 )
@@ -321,8 +343,8 @@ fun ShelfScreen(shelf: Shelf, store: Store, api: ClApi, archive: Archive, onBack
                 ListingRow(
                     l, favorite = l.postingId in favoriteIds, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) },
                     note = notes[l.postingId], modifier = Modifier.animateItem(), status = status[l.postingId],
-                    // Press and hold to choose which lists it belongs in: move it, copy it, or take it out.
-                    onLongClick = { moving = l },
+                    // Press and hold for the preview and its actions; Lists there moves or copies it.
+                    onLongClick = { view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); peeked = l },
                 )
             }
         }

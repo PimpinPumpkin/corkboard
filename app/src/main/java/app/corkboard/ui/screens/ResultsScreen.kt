@@ -91,7 +91,12 @@ import app.corkboard.data.Store
 import app.corkboard.ui.Format
 import app.corkboard.ui.ResultsState
 import app.corkboard.ui.components.ListingRow
+import app.corkboard.ui.components.ListingPeek
 import app.corkboard.ui.components.ListingTile
+import android.content.Intent
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
+import app.corkboard.data.ClUrls
 import app.corkboard.ui.components.SearchPill
 import app.corkboard.ui.components.RefreshBox
 import app.corkboard.ui.components.SoftField
@@ -127,7 +132,16 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     val notes by store.notes.collectAsStateWithLifecycle()
-    /** Long press hides a listing from every search, with a moment to take it back. */
+    // Press and hold lifts a listing into a preview with quick actions.
+    var peeked by remember { mutableStateOf<Listing?>(null) }
+    var listing by remember { mutableStateOf<Listing?>(null) }
+    val view = LocalView.current
+    fun peek(l: Listing) {
+        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        peeked = l
+    }
+
+    /** Hides a listing from every search, with a moment to take it back. */
     fun hide(l: Listing) {
         store.setHidden(l.postingId, true)
         scope.launch {
@@ -262,8 +276,8 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
             ) {
                 itemsIndexed(items, key = { _, l -> l.postingId }) { _, l ->
                     val fav = l.postingId in favoriteIds
-                    if (grid) ListingTile(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { hide(l) }, modifier = Modifier.animateItem())
-                    else ListingRow(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { hide(l) }, modifier = Modifier.animateItem())
+                    if (grid) ListingTile(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { peek(l) }, modifier = Modifier.animateItem())
+                    else ListingRow(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { peek(l) }, modifier = Modifier.animateItem())
                 }
                 if (state.hasMore) item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
@@ -276,6 +290,23 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
     if (showFilters && page != null) {
         FilterSheet(page.filters, query, api, onApply = { showFilters = false; state.run(it) }, onDismiss = { showFilters = false })
     }
+
+    peeked?.let { l ->
+        ListingPeek(
+            listing = l, favorite = l.postingId in favoriteIds, note = notes[l.postingId], units = units,
+            onDismiss = { peeked = null },
+            onOpen = { onOpen(l) },
+            onFavorite = { store.toggleFavorite(l) },
+            onLists = { listing = l },
+            onHide = { hide(l) },
+            onShare = {
+                l.uuid?.let { uuid ->
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, ClUrls.web(uuid, l.slug)).putExtra(Intent.EXTRA_SUBJECT, l.title), null))
+                }
+            },
+        )
+    }
+    listing?.let { l -> ListPicker(l, store, onDismiss = { listing = null }) }
 
     if (saving) {
         SaveSearchDialog(

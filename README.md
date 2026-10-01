@@ -29,7 +29,8 @@ Android 10 or later. Tap a button, install, done. No account.
 - **Light and dark themes**, grid or list, and photos you can pinch to zoom.
 - **A map on every listing**, with no maps app needed.
 - **Favorites, your own lists, and private notes.** Share a list or save it as a spreadsheet.
-- **Hide listings** you have seen enough of.
+- **Press and hold any listing** for a quick preview with its photos, and like it, add it to a
+  list, hide it or share it right there.
 - **Back up and restore** everything to one file, and import a list from a spreadsheet.
 - **Deleted listings stay readable**, and a changed price shows what it was.
 - **Check a whole list at once.** Pull down on any list to see which listings are gone or repriced.
