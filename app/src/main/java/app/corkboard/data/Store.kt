@@ -40,6 +40,33 @@ class Store(context: Context) {
         tmp.renameTo(File(dir, name))
     }
 
+    // ---- backup ----
+
+    private val backedUp = listOf("theme", "language", "grid", "homeCountryOnly", "pinned")
+
+    /** Writes everything the app remembers into one zip. */
+    fun backupTo(out: java.io.OutputStream) {
+        val settings = backedUp.mapNotNull { k -> prefs.all[k]?.let { k to it.toString() } }.toMap()
+        Backup.write(out, dir, File(dir.parentFile, "archive"), settings)
+    }
+
+    /**
+     * Replaces everything with a backup's contents. True if it was a backup and was applied; the
+     * app must then be restarted, because what is in memory no longer matches what is on disk.
+     */
+    fun restoreFrom(input: java.io.InputStream): Boolean {
+        val settings = Backup.restore(input, dir, File(dir.parentFile, "archive")) ?: return false
+        prefs.edit().apply {
+            backedUp.forEach { remove(it) }
+            settings["theme"]?.let { putString("theme", it) }
+            settings["language"]?.let { putString("language", it) }
+            settings["pinned"]?.let { putString("pinned", it) }
+            settings["grid"]?.let { putBoolean("grid", it == "true") }
+            settings["homeCountryOnly"]?.let { putBoolean("homeCountryOnly", it == "true") }
+        }.commit()
+        return true
+    }
+
     // ---- area ----
 
     private val _area = MutableStateFlow(read("area.json", Area.serializer()))

@@ -1,6 +1,15 @@
 package app.corkboard.ui.screens
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -90,6 +99,46 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
                 if (hidden.isEmpty()) "Nothing hidden" else if (hidden.size == 1) "Show 1 hidden listing again" else "Show ${hidden.size} hidden listings again",
                 "Press and hold a listing in search results to hide it everywhere.",
             ) { store.unhideAll() }
+
+            Heading("Backup")
+            var backupNote by remember { mutableStateOf<String?>(null) }
+            var restoring by remember { mutableStateOf<android.net.Uri?>(null) }
+            val scope = rememberCoroutineScope()
+            val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+                if (uri != null) scope.launch {
+                    val ok = withContext(Dispatchers.IO) { runCatching { context.contentResolver.openOutputStream(uri)!!.use { store.backupTo(it) } }.isSuccess }
+                    backupNote = if (ok) "Backup saved." else "The backup could not be written."
+                }
+            }
+            val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> restoring = uri }
+            Item(
+                "Save a backup",
+                backupNote ?: "One file with your favorites, lists, notes, hidden listings, saved searches, settings and saved copies of listings.",
+            ) { save.launch("corkboard-backup-${java.time.LocalDate.now()}.zip") }
+            Spacer(Modifier.height(10.dp))
+            Item("Restore from a backup", "Replaces everything in the app with what is in the backup file.") { open.launch(arrayOf("application/zip", "application/octet-stream")) }
+            restoring?.let { uri ->
+                AlertDialog(
+                    onDismissRequest = { restoring = null },
+                    title = { Text("Restore this backup?") },
+                    text = { Text("Everything in the app now (favorites, lists, notes, saved searches) is replaced with what is in the file. The app then restarts.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            restoring = null
+                            scope.launch {
+                                val ok = withContext(Dispatchers.IO) { runCatching { context.contentResolver.openInputStream(uri)!!.use { store.restoreFrom(it) } }.getOrDefault(false) }
+                                if (!ok) backupNote = "That file is not a Corkboard backup. Nothing was changed."
+                                else {
+                                    // What is in memory no longer matches the disk: start over from it.
+                                    context.packageManager.getLaunchIntentForPackage(context.packageName)?.component?.let { context.startActivity(Intent.makeRestartActivityTask(it)) }
+                                    Runtime.getRuntime().exit(0)
+                                }
+                            }
+                        }) { Text("Restore") }
+                    },
+                    dismissButton = { TextButton(onClick = { restoring = null }) { Text("Cancel") } },
+                )
+            }
 
             Heading("Privacy")
             Item(

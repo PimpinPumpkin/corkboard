@@ -30,6 +30,7 @@ Android 10 or later. Tap a button, install, done. No account.
 - **A map on every listing**, with no maps app needed.
 - **Favorites, your own lists, and private notes.** Share a list or save it as a spreadsheet.
 - **Hide listings** you have seen enough of.
+- **Back up and restore** everything to one file, for a new phone or for safekeeping.
 - **Deleted listings stay readable**, and a changed price shows what it was.
 - **See when a seller edits a listing.**
 - **Saved searches with alerts**, checked by the phone itself.
