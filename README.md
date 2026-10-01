@@ -23,8 +23,11 @@ craigslist.
   (your maps app, or OpenStreetMap in the browser if there is none).
 - **A map on the listing itself** that you can drag and pinch, with no maps app needed, and when it
   was posted and, if the seller has edited it since, when.
-- **Favorites, notes and hidden listings**, kept on the phone. Press and hold a result to hide it.
-  Every listing with a note is kept under Saved listings, hearted or not.
+- **Favorites, your own lists, notes and hidden listings**, kept on the phone. Share a list as text
+  or save it as a spreadsheet. Press and hold a result to hide it.
+- **Deleted listings stay readable.** Every listing you open is saved; the ones you keep have their
+  photos saved too. If the seller deletes it, you still have what it said, and a price that changed
+  since you last looked is shown beside the new one. A repost brings your heart and note along.
 - **Opens craigslist links.** Share a listing link to Corkboard, or choose it under "Open with".
 - **Pin the categories you use** to the top of the home screen.
 - **Saved searches with alerts.** The phone checks every few hours and tells you what is new.

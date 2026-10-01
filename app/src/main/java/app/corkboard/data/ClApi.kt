@@ -117,6 +117,14 @@ class ClApi(private val http: Http) {
     /** The hostname of the site craigslist itself would send this visitor to, or null. */
     suspend fun nearestHost(): String? = http.redirectTarget(ClUrls.FRONT_DOOR)?.let(ClUrls::hostOf)
 
-    suspend fun posting(uuid: String): Posting = Parsers.posting(get(ClUrls.posting(uuid)))
+    /** The listing as the site sends it. Kept raw so the archive can store exactly what was shown. */
+    suspend fun postingRaw(uuid: String): String {
+        val r = http.get(ClUrls.posting(uuid), BrowserHeaders.Kind.Api)
+        if (r.code == 404) throw GoneException()
+        if (!r.ok && r.contentType?.contains("json") != true) throw ApiException("craigslist answered ${r.code}")
+        return r.text()
+    }
+
+    suspend fun posting(uuid: String): Posting = Parsers.posting(postingRaw(uuid))
     suspend fun suggest(type: String, text: String): List<String> = Parsers.suggestions(get(ClUrls.suggest(type, text)))
 }

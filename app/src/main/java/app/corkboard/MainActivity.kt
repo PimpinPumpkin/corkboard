@@ -8,7 +8,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +34,9 @@ import app.corkboard.data.Listing
 import app.corkboard.data.SearchQuery
 import app.corkboard.ui.ResultsState
 import app.corkboard.ui.screens.AreaScreen
-import app.corkboard.ui.screens.FavoritesScreen
+import app.corkboard.ui.screens.ListsScreen
+import app.corkboard.ui.screens.Shelf
+import app.corkboard.ui.screens.ShelfScreen
 import app.corkboard.ui.screens.HomeScreen
 import app.corkboard.ui.screens.PostingScreen
 import app.corkboard.ui.screens.ResultsScreen
@@ -48,6 +55,7 @@ sealed interface Screen {
     data object Settings : Screen
     class Results(val state: ResultsState) : Screen
     class Posting(val listing: Listing) : Screen
+    class ShelfOf(val shelf: Shelf) : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -117,7 +125,18 @@ class MainActivity : ComponentActivity() {
 
                     // Nothing can be searched without an area, so the first launch starts there.
                     val current = if (area == null) Screen.Areas else stack.last()
-                    AnimatedContent(current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "screen") { screen ->
+                    // Going deeper slides the new screen in from the right; going back, from the left.
+                    AnimatedContent(
+                        targetState = stack.size to current,
+                        transitionSpec = {
+                            val forward = targetState.first >= initialState.first
+                            val motion = spring<IntOffset>(dampingRatio = 0.9f, stiffness = 420f)
+                            (slideInHorizontally(motion) { w -> if (forward) w / 6 else -w / 6 } + fadeIn(tween(180))) togetherWith
+                                (slideOutHorizontally(motion) { w -> if (forward) -w / 6 else w / 6 } + fadeOut(tween(120)))
+                        },
+                        contentKey = { it.second },
+                        label = "screen",
+                    ) { (_, screen) ->
                         when (screen) {
                             Screen.Home -> HomeScreen(
                                 area = area,
@@ -134,11 +153,12 @@ class MainActivity : ComponentActivity() {
                                 canGoBack = area != null,
                                 onDone = { if (stack.last() == Screen.Areas) pop() },
                             )
-                            Screen.Favorites -> FavoritesScreen(app.store, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
+                            Screen.Favorites -> ListsScreen(app.store, onBack = ::pop, onOpen = { stack += Screen.ShelfOf(it) })
+                            is Screen.ShelfOf -> ShelfScreen(screen.shelf, app.store, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
                             Screen.Saved -> SavedScreen(app.store, onBack = ::pop, onOpen = ::open)
                             Screen.Settings -> SettingsScreen(app.store, app.http, onBack = ::pop)
                             is Screen.Results -> ResultsScreen(screen.state, app.api, app.store, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
-                            is Screen.Posting -> PostingScreen(screen.listing, app.api, app.store, onBack = ::pop)
+                            is Screen.Posting -> PostingScreen(screen.listing, app.api, app.store, app.archive, onBack = ::pop)
                         }
                     }
                 }

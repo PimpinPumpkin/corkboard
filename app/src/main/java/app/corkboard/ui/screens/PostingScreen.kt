@@ -96,6 +96,21 @@ import app.corkboard.ui.Format
 import app.corkboard.ui.components.MiniMap
 import app.corkboard.ui.components.Panel
 import app.corkboard.ui.theme.PriceFont
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalFocusManager
+import app.corkboard.data.Archive
+import app.corkboard.data.GoneException
+import app.corkboard.data.Parsers
+import app.corkboard.data.Snapshot
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import kotlinx.coroutines.CancellationException
 
 private fun openInBrowser(context: Context, url: String) {
@@ -105,7 +120,7 @@ private fun openInBrowser(context: Context, url: String) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit) {
+fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, onBack: () -> Unit) {
     val context = LocalContext.current
     val favorites by store.favorites.collectAsStateWithLifecycle()
     var posting by remember { mutableStateOf<Posting?>(null) }
@@ -122,14 +137,47 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
     var menu by remember { mutableStateOf(false) }
     var viewer by remember { mutableStateOf<Int?>(null) }
 
-    LaunchedEffect(listing.uuid, attempt) {
+    // What the archive knows: the saved copy, shown when the listing is gone, and any price change.
+    var snapshot by remember { mutableStateOf<Snapshot?>(null) }
+    var gone by remember { mutableStateOf(false) }
+    var offline by remember { mutableStateOf(false) }
+    var listPicker by remember { mutableStateOf(false) }
+    val lists by store.lists.collectAsStateWithLifecycle()
+
+    // Every time the listing is opened it is asked for again, so an edit or a deletion shows up.
+    // (The site lets a copy be reused for five minutes; within that, this costs no request.)
+    LaunchedEffect(opened.uuid, attempt) {
         error = null
+        val uuid = opened.uuid
+        if (uuid == null) {
+            error = "This listing cannot be opened"
+            return@LaunchedEffect
+        }
         try {
-            posting = api.posting(listing.uuid ?: throw IllegalStateException("This listing cannot be opened"))
+            val body = api.postingRaw(uuid)
+            val fresh = Parsers.posting(body)
+            snapshot = withContext(Dispatchers.IO) { archive.save(uuid, body, fresh.priceText) }
+            gone = false
+            offline = false
+            posting = fresh
+            // The same thing posted again: bring the heart, note and lists over from the old one.
+            fresh.repostOf?.let { old ->
+                store.carryOver(old, opened.copy(postingId = fresh.postingId, postedAt = fresh.postedAt, title = fresh.title, priceText = fresh.priceText, imageIds = fresh.imageIds, place = fresh.place, lat = fresh.lat, lon = fresh.lon))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            error = e.message ?: "Could not load this listing"
+            // Gone from the site, or no network: fall back to the copy kept from last time.
+            val saved = withContext(Dispatchers.IO) { archive.load(uuid) }
+            val old = saved?.let { runCatching { Parsers.posting(it.body) }.getOrNull() }
+            if (old != null) {
+                snapshot = saved
+                gone = e is GoneException
+                offline = !gone
+                posting = old
+            } else {
+                error = e.message ?: "Could not load this listing"
+            }
         }
     }
 
@@ -153,6 +201,10 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                             tint = if (isFavorite) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                         )
                     }
+                    IconButton(onClick = { listPicker = true }, enabled = listing.postingId != 0L) {
+                        val inAny = lists.any { l -> l.items.any { it.postingId == listing.postingId } }
+                        Icon(if (inAny) Icons.AutoMirrored.Filled.PlaylistAddCheck else Icons.AutoMirrored.Outlined.PlaylistAdd, "Add to a list")
+                    }
                     if (webUrl != null) IconButton(onClick = {
                         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, webUrl).putExtra(Intent.EXTRA_SUBJECT, title), null))
                     }) { Icon(Icons.Outlined.Share, "Share") }
@@ -171,7 +223,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                 Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     // Replying means solving the site's own check and seeing the seller's contact
                     // details, which belongs in a real browser.
-                    Button(onClick = { webUrl?.let { openInBrowser(context, it) } }, enabled = webUrl != null, modifier = Modifier.weight(1f).height(60.dp), shape = RoundedCornerShape(24.dp)) {
+                    Button(onClick = { webUrl?.let { openInBrowser(context, it) } }, enabled = webUrl != null && !gone, modifier = Modifier.weight(1f).height(60.dp), shape = RoundedCornerShape(24.dp)) {
                         Icon(Icons.AutoMirrored.Outlined.Reply, null, Modifier.size(22.dp))
                         Spacer(Modifier.size(10.dp))
                         Text("Reply on craigslist", style = MaterialTheme.typography.titleMedium)
@@ -181,9 +233,31 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
         },
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())) {
-            if (imageIds.isNotEmpty()) Gallery(imageIds, onOpen = { viewer = it })
+            if (gone || offline) Row(
+                Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (gone) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh).clickable(enabled = offline) { attempt++ }.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val onBanner = if (gone) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
+                val savedAgo = snapshot?.let { Format.ago(it.savedAt) } ?: "earlier"
+                Icon(Icons.Outlined.Inventory2, null, tint = onBanner)
+                Text(
+                    if (gone) "This listing has been deleted or has expired. This is the copy saved $savedAgo."
+                    else "Could not reach craigslist. This is the copy saved $savedAgo. Tap to try again.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onBanner,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+            if (imageIds.isNotEmpty()) Gallery(imageIds, photo = { i -> opened.uuid?.let { archive.photo(it, i) } }, onOpen = { viewer = it })
             Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
                 if (price != null) Text(price, style = MaterialTheme.typography.displaySmall, fontFamily = PriceFont)
+                snapshot?.priceWas?.takeIf { it != price }?.let { was ->
+                    Text(
+                        "was $was" + (snapshot?.priceChangedAt?.let { " · changed ${Format.ago(it)}" } ?: ""),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
                 SelectionContainer { Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 2.dp)) }
                 val postedAt = p?.postedAt ?: listing.postedAt
                 // Only a real edit or renewal counts. An untouched listing carries an updated time
@@ -200,12 +274,15 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp),
                 )
-                // The user's own note about this listing. Saved as it is typed; never leaves the phone.
+                // The user's own note about this listing. Typed as a draft and kept only when saved;
+                // it never leaves the phone.
                 val notes by store.notes.collectAsStateWithLifecycle()
-                var note by remember(listing.postingId) { mutableStateOf(notes[listing.postingId].orEmpty()) }
+                val savedNote = notes[listing.postingId].orEmpty()
+                var note by remember(listing.postingId, savedNote) { mutableStateOf(savedNote) }
+                val focus = LocalFocusManager.current
                 TextField(
                     value = note,
-                    onValueChange = { note = it.take(2000); store.setNote(listing, note) },
+                    onValueChange = { note = it.take(2000) },
                     enabled = listing.postingId != 0L,
                     modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
                     placeholder = { Text("Your note") },
@@ -221,6 +298,14 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                         disabledIndicatorColor = Color.Transparent,
                     ),
                 )
+                AnimatedVisibility(visible = note.trim() != savedNote.trim()) {
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                        TextButton(onClick = { note = savedNote; focus.clearFocus() }) { Text("Cancel") }
+                        Button(onClick = { store.setNote(listing, note.trim()); focus.clearFocus() }) {
+                            Text(if (note.isBlank()) "Remove note" else "Save note")
+                        }
+                    }
+                }
                 when {
                     p != null -> {
                         if (p.attributes.isNotEmpty()) {
@@ -291,16 +376,19 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
         }
     }
 
-    viewer?.let { start -> PhotoViewer(imageIds, start, onClose = { viewer = null }) }
+    viewer?.let { start -> PhotoViewer(imageIds, start, photo = { i -> if (gone) opened.uuid?.let { archive.photo(it, i) } else null }, onClose = { viewer = null }) }
+
+    if (listPicker) ListPicker(listing, store, onDismiss = { listPicker = false })
 }
 
 @Composable
-private fun Gallery(imageIds: List<String>, onOpen: (Int) -> Unit) {
+private fun Gallery(imageIds: List<String>, photo: (Int) -> File?, onOpen: (Int) -> Unit) {
     val pager = rememberPagerState { imageIds.size }
     Box {
         HorizontalPager(pager, Modifier.fillMaxWidth().padding(horizontal = 12.dp).aspectRatio(4f / 3f).clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) { i ->
             AsyncImage(
-                model = Images.url(imageIds[i], Images.MEDIUM),
+                // The archived copy when there is one: the site deletes photos along with the listing.
+                model = remember(i) { photo(i) } ?: Images.url(imageIds[i], Images.MEDIUM),
                 contentDescription = "Photo ${i + 1} of ${imageIds.size}",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().clickable { onOpen(i) },
@@ -317,7 +405,7 @@ private fun Gallery(imageIds: List<String>, onOpen: (Int) -> Unit) {
 
 /** Full-screen photos at the largest size the site keeps, with pinch or double tap to zoom. */
 @Composable
-private fun PhotoViewer(imageIds: List<String>, start: Int, onClose: () -> Unit) {
+private fun PhotoViewer(imageIds: List<String>, start: Int, photo: (Int) -> File?, onClose: () -> Unit) {
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val pager = rememberPagerState(initialPage = start) { imageIds.size }
         var zoomed by remember { mutableStateOf(false) }
@@ -330,7 +418,7 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, onClose: () -> Unit)
                     if (pager.currentPage != i) { scale = 1f; offset = Offset.Zero }
                 }
                 AsyncImage(
-                    model = Images.url(imageIds[i], Images.LARGE),
+                    model = remember(i) { photo(i) } ?: Images.url(imageIds[i], Images.LARGE),
                     contentDescription = "Photo ${i + 1} of ${imageIds.size}",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
@@ -375,6 +463,39 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, onClose: () -> Unit)
                 color = Color.White,
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp),
             )
+        }
+    }
+}
+
+/** Which of the user's lists this listing is in, with a way to start a new one. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ListPicker(listing: Listing, store: Store, onDismiss: () -> Unit) {
+    val lists by store.lists.collectAsStateWithLifecycle()
+    var name by remember { mutableStateOf("") }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding()) {
+            Text("Add to a list", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+            lists.forEach { l ->
+                val inList = l.items.any { it.postingId == listing.postingId }
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { store.toggleInList(l.id, listing) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = inList, onCheckedChange = { store.toggleInList(l.id, listing) })
+                    Text(l.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Text("${l.items.size}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(
+                    value = name,
+                    onValueChange = { name = it.take(60) },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("New list") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                )
+                Button(enabled = name.isNotBlank(), onClick = { store.toggleInList(store.createList(name).id, listing); name = "" }) { Text("Create") }
+            }
         }
     }
 }

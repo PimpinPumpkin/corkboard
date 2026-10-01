@@ -1,6 +1,16 @@
 package app.corkboard.ui.screens
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.Sell
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
@@ -179,10 +189,20 @@ fun HomeScreen(
                 }
             }
             item { Spacer(Modifier.height(20.dp)) }
-            items(pinned.chunked(2)) { pair ->
-                Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    pair.forEach { c -> FeaturedTile(c, Modifier.weight(1f), onLongClick = { store.togglePinned(c.abbr) }) { onSearch(query(c)) } }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+            item(key = "pinned") {
+                // The pinned categories. The grid grows and shrinks smoothly as pins come and go.
+                Column(Modifier.animateContentSize(spring(dampingRatio = 0.8f, stiffness = 380f))) {
+                    pinned.chunked(2).forEach { pair ->
+                        Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            pair.forEach { c -> key(c.abbr) { FeaturedTile(c, Modifier.weight(1f), onUnpin = { store.togglePinned(c.abbr) }) { onSearch(query(c)) } } }
+                            if (pair.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                    if (pinned.isEmpty()) Text(
+                        "Tap the pin beside any category below to keep it up here.",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(4.dp),
+                    )
                 }
             }
             Catalog.sections.forEach { section ->
@@ -192,8 +212,8 @@ fun HomeScreen(
                     SectionTitle(section.name) {
                         if (section !== Catalog.more) TextButton(onClick = { onSearch(query(section.all)) }) { Text("See all") }
                     }
-                    Panel {
-                        shown.forEach { c -> CategoryRow(c, c.abbr in pinnedAbbrs, onLongClick = { store.togglePinned(c.abbr) }) { onSearch(query(c)) } }
+                    Panel(Modifier.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f))) {
+                        shown.forEach { c -> key(c.abbr) { CategoryRow(c, c.abbr in pinnedAbbrs, onPin = { store.togglePinned(c.abbr) }) { onSearch(query(c)) } } }
                         if (collapsible) Row(
                             Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(horizontal = 20.dp, vertical = 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -209,7 +229,7 @@ fun HomeScreen(
             }
             item {
                 Text(
-                    "Press and hold a category to pin it to the top, or to unpin it.",
+                    "The pin beside a category keeps it at the top of this screen.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 16.dp, start = 4.dp),
@@ -220,27 +240,43 @@ fun HomeScreen(
 }
 
 @Composable
-private fun FeaturedTile(c: Category, modifier: Modifier, onLongClick: () -> Unit, onClick: () -> Unit) {
-    Column(
-        modifier.clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(16.dp),
-    ) {
-        Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-            Icon(featuredIcons[c.abbr] ?: Icons.Outlined.PushPin, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+private fun FeaturedTile(c: Category, modifier: Modifier, onUnpin: () -> Unit, onClick: () -> Unit) {
+    // Tiles arrive with a little spring instead of just appearing.
+    val appear = remember { Animatable(0.85f) }
+    LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f)) }
+    Box(modifier.scale(appear.value)) {
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .combinedClickable(onClick = onClick, onLongClick = onUnpin).padding(16.dp),
+        ) {
+            Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+                Icon(featuredIcons[c.abbr] ?: Icons.Outlined.Sell, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(c.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Spacer(Modifier.height(14.dp))
-        Text(c.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        IconButton(onClick = onUnpin, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+            Icon(Icons.Filled.PushPin, "Unpin ${c.name}", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 
 @Composable
-private fun CategoryRow(c: Category, pinned: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
+private fun CategoryRow(c: Category, pinned: Boolean, onPin: () -> Unit, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(horizontal = 20.dp, vertical = 16.dp),
+        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onPin).padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(c.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        if (pinned) Icon(Icons.Outlined.PushPin, "Pinned", Modifier.padding(end = 8.dp).size(18.dp), tint = MaterialTheme.colorScheme.primary)
-        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        // The pin is a button in plain sight: filled and tilted upright when the category is pinned.
+        val turn by animateFloatAsState(if (pinned) 0f else 35f, spring(dampingRatio = 0.5f, stiffness = 400f), label = "pin")
+        IconButton(onClick = onPin) {
+            Icon(
+                if (pinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                if (pinned) "Unpin ${c.name}" else "Pin ${c.name}",
+                Modifier.size(20.dp).rotate(turn),
+                tint = if (pinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+            )
+        }
     }
 }

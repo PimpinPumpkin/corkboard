@@ -89,6 +89,7 @@ import app.corkboard.ui.ResultsState
 import app.corkboard.ui.components.ListingRow
 import app.corkboard.ui.components.ListingTile
 import app.corkboard.ui.components.SearchPill
+import app.corkboard.ui.components.SoftField
 import app.corkboard.work.Alerts
 import kotlinx.coroutines.launch
 
@@ -256,8 +257,8 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
             ) {
                 itemsIndexed(items, key = { _, l -> l.postingId }) { _, l ->
                     val fav = l.postingId in favoriteIds
-                    if (grid) ListingTile(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { hide(l) })
-                    else ListingRow(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { hide(l) })
+                    if (grid) ListingTile(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { hide(l) }, modifier = Modifier.animateItem())
+                    else ListingRow(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { hide(l) }, modifier = Modifier.animateItem())
                 }
                 if (state.hasMore) item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
@@ -290,23 +291,8 @@ private fun PlaceDialog(query: SearchQuery, subareas: List<Option>, distanceUnit
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("Near a postal code", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = postal,
-                        onValueChange = { v -> postal = v.filter { it.isLetterOrDigit() || it == ' ' || it == '-' }.take(10) },
-                        modifier = Modifier.weight(1.3f),
-                        label = { Text("Postal code") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                    )
-                    OutlinedTextField(
-                        value = distance,
-                        onValueChange = { v -> distance = v.filter { it.isDigit() }.take(4) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("Within") },
-                        suffix = { Text(distanceUnit) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    )
+                    SoftField(value = postal, onValueChange = { v -> postal = v.filter { it.isLetterOrDigit() || it == ' ' || it == '-' }.take(10) }, modifier = Modifier.weight(1.3f), label = "Postal code", keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters))
+                    SoftField(value = distance, onValueChange = { v -> distance = v.filter { it.isDigit() }.take(4) }, modifier = Modifier.weight(1f), label = "Within", suffix = distanceUnit, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 }
                 Button(onClick = { onApply(query.near(postal, distance)) }, enabled = postal.isNotBlank(), modifier = Modifier.padding(top = 12.dp)) { Text("Search near here") }
 

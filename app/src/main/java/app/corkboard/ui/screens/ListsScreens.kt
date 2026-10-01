@@ -1,5 +1,32 @@
 package app.corkboard.ui.screens
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import app.corkboard.data.Export
+import app.corkboard.data.Images
+import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -62,36 +89,151 @@ private fun ListScaffold(title: String, onBack: () -> Unit, empty: String?, cont
     }
 }
 
-/** The listings the user kept: the hearted ones, or every one with a note on it. */
+/** Which collection a list screen shows: the two built-in ones, or one the user made. */
+sealed interface Shelf {
+    data object Favorites : Shelf
+    data object Noted : Shelf
+    data class Custom(val id: Long) : Shelf
+}
+
+/** Every collection of kept listings: favorites, the ones with notes, and the user's own lists. */
 @Composable
-fun FavoritesScreen(store: Store, onBack: () -> Unit, onOpen: (Listing) -> Unit) {
+fun ListsScreen(store: Store, onBack: () -> Unit, onOpen: (Shelf) -> Unit) {
     val favorites by store.favorites.collectAsStateWithLifecycle()
     val noted by store.noted.collectAsStateWithLifecycle()
-    val notes by store.notes.collectAsStateWithLifecycle()
-    var showNoted by rememberSaveable { mutableStateOf(false) }
-    val favoriteIds = remember(favorites) { favorites.map { it.postingId }.toHashSet() }
-    val shown = if (showNoted) noted else favorites
+    val lists by store.lists.collectAsStateWithLifecycle()
+    var creating by remember { mutableStateOf(false) }
     ListScaffold("Saved listings", onBack, null) { pad ->
-        LazyColumn(contentPadding = pad) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding() + 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            item { ShelfCard(Icons.Outlined.FavoriteBorder, "Favorites", favorites.size, favorites.firstOrNull()) { onOpen(Shelf.Favorites) } }
+            item { ShelfCard(Icons.Outlined.EditNote, "With notes", noted.size, noted.firstOrNull()) { onOpen(Shelf.Noted) } }
+            items(lists, key = { it.id }) { l ->
+                ShelfCard(Icons.AutoMirrored.Outlined.ListAlt, l.name, l.items.size, l.items.firstOrNull(), Modifier.animateItem()) { onOpen(Shelf.Custom(l.id)) }
+            }
             item {
-                Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = !showNoted, onClick = { showNoted = false }, label = { Text("Favorites · ${favorites.size}") })
-                    FilterChip(selected = showNoted, onClick = { showNoted = true }, label = { Text("With notes · ${noted.size}") })
+                FilledTonalButton(onClick = { creating = true }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                    Icon(Icons.Outlined.Add, null)
+                    Text("New list", modifier = Modifier.padding(start = 8.dp))
                 }
-            }
-            if (shown.isEmpty()) item {
-                Text(
-                    if (showNoted) "Write a note on any listing and it shows up here, hearted or not." else "Tap the heart on a listing to keep it here.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                )
-            }
-            items(shown, key = { it.postingId }) { l ->
-                ListingRow(l, favorite = l.postingId in favoriteIds, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, note = notes[l.postingId])
             }
         }
     }
+    if (creating) NameDialog("New list", "", "Create", onDismiss = { creating = false }) { store.createList(it); creating = false }
+}
+
+@Composable
+private fun ShelfCard(icon: ImageVector, name: String, count: Int, cover: Listing?, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // The newest listing's photo stands in for the list; an icon when the list is empty.
+        Box(Modifier.size(64.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+            val image = cover?.imageIds?.firstOrNull()
+            if (image == null) Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            else AsyncImage(model = Images.url(image, Images.THUMB), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+        Column(Modifier.weight(1f).padding(start = 16.dp)) {
+            Text(name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (count == 1) "1 listing" else "$count listings", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun NameDialog(title: String, initial: String, confirm: String, onDismiss: () -> Unit, onDone: (String) -> Unit) {
+    var name by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { OutlinedTextField(value = name, onValueChange = { name = it.take(60) }, singleLine = true, label = { Text("Name") }) },
+        confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { onDone(name) }) { Text(confirm) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/** One collection, with what can be done to it: share it, save it as a spreadsheet, rename, delete. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing) -> Unit) {
+    val context = LocalContext.current
+    val favorites by store.favorites.collectAsStateWithLifecycle()
+    val noted by store.noted.collectAsStateWithLifecycle()
+    val lists by store.lists.collectAsStateWithLifecycle()
+    val notes by store.notes.collectAsStateWithLifecycle()
+    val favoriteIds = remember(favorites) { favorites.map { it.postingId }.toHashSet() }
+    val custom = (shelf as? Shelf.Custom)?.let { c -> lists.firstOrNull { it.id == c.id } }
+    val name = when (shelf) {
+        Shelf.Favorites -> "Favorites"
+        Shelf.Noted -> "With notes"
+        is Shelf.Custom -> custom?.name ?: ""
+    }
+    val items = when (shelf) {
+        Shelf.Favorites -> favorites
+        Shelf.Noted -> noted
+        is Shelf.Custom -> custom?.items.orEmpty()
+    }
+    var menu by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
+    val saveCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null) runCatching { context.contentResolver.openOutputStream(uri)?.use { it.write(Export.csv(items, notes).toByteArray()) } }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") } },
+                actions = {
+                    IconButton(enabled = items.isNotEmpty(), onClick = {
+                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, name).putExtra(Intent.EXTRA_TEXT, Export.text(name, items, notes)), null))
+                    }) { Icon(Icons.Outlined.Share, "Share this list") }
+                    Box {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, "More") }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(text = { Text("Save as spreadsheet (CSV)") }, enabled = items.isNotEmpty(), onClick = { menu = false; saveCsv.launch(Export.fileName(name)) })
+                            if (custom != null) {
+                                DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; renaming = true })
+                                DropdownMenuItem(text = { Text("Delete list") }, onClick = { menu = false; deleting = true })
+                            }
+                        }
+                    }
+                },
+            )
+        },
+    ) { pad ->
+        if (items.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(pad).padding(32.dp), contentAlignment = Alignment.Center) {
+                Text(
+                    when (shelf) {
+                        Shelf.Favorites -> "Tap the heart on a listing to keep it here."
+                        Shelf.Noted -> "Write a note on any listing and it shows up here, hearted or not."
+                        is Shelf.Custom -> "Open a listing and tap the list button at the top to add it here."
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
+                )
+            }
+        } else LazyColumn(contentPadding = pad) {
+            items(items, key = { it.postingId }) { l ->
+                ListingRow(
+                    l, favorite = l.postingId in favoriteIds, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) },
+                    note = notes[l.postingId], modifier = Modifier.animateItem(),
+                    // In a list of the user's own, press and hold takes the listing out of it.
+                    onLongClick = custom?.let { c -> { store.toggleInList(c.id, l) } },
+                )
+            }
+        }
+    }
+    if (renaming && custom != null) NameDialog("Rename list", custom.name, "Rename", onDismiss = { renaming = false }) { store.renameList(custom.id, it); renaming = false }
+    if (deleting && custom != null) AlertDialog(
+        onDismissRequest = { deleting = false },
+        title = { Text("Delete \"${custom.name}\"?") },
+        text = { Text("The list goes away. The listings in it are not touched on craigslist.") },
+        confirmButton = { TextButton(onClick = { deleting = false; store.deleteList(custom.id); onBack() }) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } },
+    )
 }
 
 @Composable
@@ -99,7 +241,7 @@ fun SavedScreen(store: Store, onBack: () -> Unit, onOpen: (SearchQuery) -> Unit)
     val saved by store.saved.collectAsStateWithLifecycle()
     val context = LocalContext.current
     ListScaffold("Saved searches", onBack, if (saved.isEmpty()) "Tap the bookmark on any search to save it and hear about new listings." else null) { pad ->
-        LazyColumn(contentPadding = pad) {
+        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding() + 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(saved, key = { it.id }) { s ->
                 SavedRow(
                     s,
@@ -116,10 +258,13 @@ fun SavedScreen(store: Store, onBack: () -> Unit, onOpen: (SearchQuery) -> Unit)
 @Composable
 private fun SavedRow(s: SavedSearch, onOpen: () -> Unit, onAlerts: () -> Unit, onDelete: () -> Unit) {
     val q = s.query
-    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onOpen).padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(q.text.ifEmpty { q.categoryName }, style = MaterialTheme.typography.bodyLarge)
+                Text(q.text.ifEmpty { q.categoryName }, style = MaterialTheme.typography.titleMedium)
                 if (s.unseen > 0) Badge(Modifier.padding(start = 8.dp)) { Text("${s.unseen} new") }
             }
             val detail = listOfNotNull(

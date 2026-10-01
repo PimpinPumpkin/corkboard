@@ -1,6 +1,10 @@
 package app.corkboard.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -52,6 +56,8 @@ private fun Photo(listing: Listing, modifier: Modifier) {
 
 @Composable
 private fun Heart(on: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    // A small bounce when it turns on, so the tap visibly lands.
+    val pop by animateFloatAsState(if (on) 1f else 0.85f, spring(dampingRatio = 0.35f, stiffness = 500f), label = "heart")
     Box(
         modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.35f)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -59,8 +65,8 @@ private fun Heart(on: Boolean, modifier: Modifier, onClick: () -> Unit) {
         Icon(
             if (on) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
             if (on) "Remove from favorites" else "Add to favorites",
-            tint = Color.White,
-            modifier = Modifier.size(20.dp),
+            tint = if (on) Color(0xFFFF6B6B) else Color.White,
+            modifier = Modifier.size(22.dp).scale(pop),
         )
     }
 }

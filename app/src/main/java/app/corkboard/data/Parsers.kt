@@ -206,7 +206,7 @@ object Parsers {
     // ---- one listing ----
 
     fun posting(body: String): Posting {
-        val p = data(body)["items"].arr()?.firstOrNull().obj() ?: throw ApiException("This listing is no longer available")
+        val p = data(body)["items"].arr()?.firstOrNull().obj() ?: throw GoneException()
         val loc = p["location"].obj()
         val place = listOfNotNull(
             loc?.get("neighborhood").name() ?: loc?.get("description").name(),

@@ -138,11 +138,72 @@ class Store(context: Context) {
     private val _favorites = MutableStateFlow(read("favorites.json", ListSerializer(Listing.serializer())).orEmpty())
     val favorites: StateFlow<List<Listing>> = _favorites.asStateFlow()
 
+    /** Called whenever a listing is hearted, listed or noted, so its text and photos can be archived. */
+    var onKept: ((Listing) -> Unit)? = null
+
     fun toggleFavorite(listing: Listing) {
         val now = _favorites.value
-        val next = if (now.any { it.postingId == listing.postingId }) now.filter { it.postingId != listing.postingId } else listOf(listing) + now
+        val adding = now.none { it.postingId == listing.postingId }
+        val next = if (adding) listOf(listing) + now else now.filter { it.postingId != listing.postingId }
         write("favorites.json", ListSerializer(Listing.serializer()), next)
         _favorites.value = next
+        if (adding) onKept?.invoke(listing)
+    }
+
+    // ---- the user's own lists ----
+
+    private val _lists = MutableStateFlow(read("lists.json", ListSerializer(UserList.serializer())).orEmpty())
+    val lists: StateFlow<List<UserList>> = _lists.asStateFlow()
+
+    private fun setLists(next: List<UserList>) {
+        write("lists.json", ListSerializer(UserList.serializer()), next)
+        _lists.value = next
+    }
+
+    fun createList(name: String): UserList {
+        val list = UserList(System.currentTimeMillis(), name.trim().ifEmpty { "New list" })
+        setLists(_lists.value + list)
+        return list
+    }
+
+    fun renameList(id: Long, name: String) = setLists(_lists.value.map { if (it.id == id && name.isNotBlank()) it.copy(name = name.trim()) else it })
+    fun deleteList(id: Long) = setLists(_lists.value.filter { it.id != id })
+
+    /** Adds [listing] to the list, or takes it out if it is already there. */
+    fun toggleInList(id: Long, listing: Listing) {
+        var added = false
+        setLists(_lists.value.map { l ->
+            if (l.id != id) l
+            else if (l.items.any { it.postingId == listing.postingId }) l.copy(items = l.items.filter { it.postingId != listing.postingId })
+            else l.copy(items = listOf(listing) + l.items).also { added = true }
+        })
+        if (added) onKept?.invoke(listing)
+    }
+
+    /** Every listing the user chose to keep, by any means: the ones whose photos stay archived. */
+    fun keptUuids(): Set<String> =
+        (_favorites.value + _noted.value + _lists.value.flatMap { it.items }).mapNotNull { it.uuid }.toSet()
+
+    /**
+     * A seller who posts the same thing again gets a new listing that names the old one. Whatever
+     * the user attached to the old one (a heart, a note, a place in a list) moves to the new one.
+     */
+    fun carryOver(oldId: Long, new: Listing) {
+        if (oldId == new.postingId) return
+        if (_favorites.value.any { it.postingId == oldId }) {
+            val next = _favorites.value.filter { it.postingId != new.postingId }.map { if (it.postingId == oldId) new else it }
+            write("favorites.json", ListSerializer(Listing.serializer()), next)
+            _favorites.value = next
+        }
+        if (_lists.value.any { l -> l.items.any { it.postingId == oldId } }) {
+            setLists(_lists.value.map { l -> l.copy(items = l.items.filter { it.postingId != new.postingId }.map { if (it.postingId == oldId) new else it }) })
+        }
+        val note = _notes.value[oldId]
+        if (note != null) {
+            if (_notes.value[new.postingId] == null) setNote(new, note)
+            setNote(Listing(postingId = oldId, postedAt = 0, categoryId = 0), "")
+        }
+        if (oldId in _hidden.value) setHidden(new.postingId, true)
     }
 
     // ---- notes ----
@@ -168,6 +229,7 @@ class Store(context: Context) {
         val listings = if (text.isBlank()) others else listOf(listing) + others
         write("noted.json", ListSerializer(Listing.serializer()), listings)
         _noted.value = listings
+        if (text.isNotBlank()) onKept?.invoke(listing)
     }
 
     fun unhideAll() {

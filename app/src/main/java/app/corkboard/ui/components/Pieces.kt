@@ -74,7 +74,37 @@ fun SearchPill(
 /** A rounded, tinted panel that groups related rows or facts, the way a settings page does. */
 @Composable
 fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer), content = content)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer).then(modifier), content = content)
+}
+
+/** A text box in the app's own style: filled, rounded, no underline. Used wherever something is typed. */
+@Composable
+fun SoftField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    label: String? = null,
+    prefix: String? = null,
+    suffix: String? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+) {
+    val clear = androidx.compose.ui.graphics.Color.Transparent
+    androidx.compose.material3.TextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        placeholder = label?.let { { Text(it) } },
+        prefix = prefix?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+        suffix = suffix?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+        singleLine = true,
+        shape = RoundedCornerShape(20.dp),
+        keyboardOptions = keyboardOptions,
+        colors = androidx.compose.material3.TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedIndicatorColor = clear, unfocusedIndicatorColor = clear, disabledIndicatorColor = clear,
+        ),
+    )
 }
 
 /** The heading over a group: large and round, with room above it. */

@@ -162,7 +162,14 @@ class Posting(
     val repostOf: Long? = null,
 )
 
-class ApiException(message: String) : Exception(message)
+open class ApiException(message: String) : Exception(message)
+
+/** The site no longer has this listing: deleted, expired or flagged. */
+class GoneException : ApiException("This listing has been deleted or has expired.")
+
+/** A list of kept listings the user named: "Trucks under 10k", "For the shop". */
+@Serializable
+data class UserList(val id: Long, val name: String, val items: List<Listing> = emptyList())
 
 object Images {
     const val THUMB = "300x300"

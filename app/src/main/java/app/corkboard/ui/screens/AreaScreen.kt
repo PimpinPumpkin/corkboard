@@ -56,6 +56,7 @@ import app.corkboard.data.Located
 import app.corkboard.data.Near
 import app.corkboard.data.Store
 import app.corkboard.ui.components.SearchPill
+import app.corkboard.ui.components.SoftField
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -166,22 +167,8 @@ fun AreaScreen(api: ClApi, store: Store, canGoBack: Boolean, onDone: () -> Unit)
                             Text("Use my location")
                         }
                         Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = postal,
-                                onValueChange = { v -> postal = v.filter { it.isLetterOrDigit() || it == ' ' || it == '-' }.take(10) },
-                                modifier = Modifier.weight(1.4f),
-                                label = { Text("Postal code") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                            )
-                            OutlinedTextField(
-                                value = distance,
-                                onValueChange = { v -> distance = v.filter { it.isDigit() }.take(4) },
-                                modifier = Modifier.weight(1f),
-                                label = { Text("Within") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            )
+                            SoftField(value = postal, onValueChange = { v -> postal = v.filter { it.isLetterOrDigit() || it == ' ' || it == '-' }.take(10) }, modifier = Modifier.weight(1.4f), label = "Postal code", keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters))
+                            SoftField(value = distance, onValueChange = { v -> distance = v.filter { it.isDigit() }.take(4) }, modifier = Modifier.weight(1f), label = "Within", suffix = store.area.value?.distanceUnit, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                             Button(
                                 enabled = postal.isNotBlank() && !busy,
                                 onClick = {

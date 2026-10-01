@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import app.corkboard.data.ClApi
 import app.corkboard.data.Filter
 import app.corkboard.data.SearchQuery
+import app.corkboard.ui.components.SoftField
 import kotlinx.coroutines.delay
 
 /**
@@ -52,7 +53,7 @@ fun FilterSheet(filters: List<Filter>, query: SearchQuery, api: ClApi, onApply: 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Column(Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-                Text("Filters", style = MaterialTheme.typography.headlineSmall)
+                Text("Filters", style = MaterialTheme.typography.headlineMedium)
                 // Consecutive on/off switches read better as one group of chips than as one row each.
                 val groups = remember(filters) {
                     val out = mutableListOf<List<Filter>>()
@@ -113,7 +114,7 @@ fun FilterSheet(filters: List<Filter>, query: SearchQuery, api: ClApi, onApply: 
                     // Clearing keeps what is not in this sheet: the search text, the sort order and the place.
                     TextButton(onClick = { draft = draft.copy(params = draft.params.filterKeys { it in SearchQuery.OWN_UI }) }) { Text("Clear all") }
                     Spacer(Modifier.weight(1f))
-                    Button(onClick = { onApply(draft) }) { Text("Show results") }
+                    Button(onClick = { onApply(draft) }, modifier = Modifier.height(52.dp)) { Text("Show results", style = MaterialTheme.typography.titleMedium) }
                 }
             }
         }
@@ -124,21 +125,19 @@ fun FilterSheet(filters: List<Filter>, query: SearchQuery, api: ClApi, onApply: 
 private fun Label(text: String) {
     Text(
         text.replaceFirstChar { it.uppercase() },
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 20.dp, bottom = 6.dp),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
     )
 }
 
 @Composable
 private fun NumberField(placeholder: String, prefix: String, value: String, modifier: Modifier, onChange: (String) -> Unit) {
-    OutlinedTextField(
+    SoftField(
         value = value,
         onValueChange = { s -> onChange(s.filter { it.isDigit() }.take(9)) },
         modifier = modifier,
-        placeholder = { Text(placeholder) },
-        prefix = if (prefix.isEmpty()) null else ({ Text(prefix) }),
-        singleLine = true,
+        label = placeholder,
+        prefix = prefix,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
     )
 }
@@ -155,7 +154,7 @@ private fun SuggestField(f: Filter.Text, value: String, api: ClApi, onChange: (S
         delay(350)
         suggestions = runCatching { api.suggest(f.autocomplete, value) }.getOrDefault(emptyList()).take(6)
     }
-    OutlinedTextField(value = value, onValueChange = onChange, modifier = Modifier.fillMaxWidth(), singleLine = true)
+    SoftField(value = value, onValueChange = onChange, modifier = Modifier.fillMaxWidth(), label = "Any")
     suggestions.forEach { s ->
         Text(
             s,
