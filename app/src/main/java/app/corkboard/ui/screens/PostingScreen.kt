@@ -182,8 +182,8 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                 if (price != null) Text(price, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                 SelectionContainer { Text(title, style = MaterialTheme.typography.titleLarge) }
                 val postedAt = p?.postedAt ?: listing.postedAt
-                // A listing edited or renewed after it went up says so, right beside when it was posted.
-                val updated = p?.updatedAt?.takeIf { it > postedAt + 600 }
+                // Shown whenever the site has an updated time, the same as the site's own page does.
+                val updated = p?.updatedAt?.takeIf { it > 0 && it != postedAt }
                 Text(
                     listOfNotNull(
                         (p?.place?.takeIf { it.isNotBlank() } ?: listing.place).takeIf { it.isNotBlank() },
@@ -242,9 +242,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, onBack: () -> Unit)
                         Text(
                             listOfNotNull(
                                 "Posted ${Format.date(p.postedAt)}",
-                                // The site stamps most listings "updated" a second after posting. Shown
-                                // as the site shows it, here, but only called out up top when it is real.
-                                p.updatedAt.takeIf { it > 0 && it != p.postedAt }?.let { "Updated ${Format.date(it)}" },
+                                updated?.let { "Updated ${Format.date(it)}" },
                                 p.repostOf?.let { "A repost of an earlier listing ($it)" },
                                 "Posting ID ${p.postingId}",
                             ).joinToString("\n"),
