@@ -169,11 +169,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add gradle.properties
-          git commit -m "Update the built-in Chrome network stack to ${v%%.*}" -m "Cronet $pinned to $v. Built, tested and checked against the live site by the cronet workflow."
-          git push origin HEAD:main
-          git fetch origin canary
-          if git merge-base --is-ancestor origin/canary HEAD; then git push origin HEAD:canary
-          else git checkout -B canary origin/canary && git merge --no-edit main && git push origin canary; fi
+          # A new major is news; a point release within one is named in full.
+          if [ "${v%%.*}" != "${pinned%%.*}" ]; then what="Chrome ${v%%.*}"; else what="$v"; fi
+          git commit -m "Update the built-in Chrome network stack to $what" -m "Cronet $pinned to $v. Built, tested and checked against the live site by the cronet workflow."
+          # Full ref names throughout: the rolling canary release has a tag called "canary" too.
+          git push origin HEAD:refs/heads/main
+          git fetch --no-tags origin refs/heads/canary:refs/remotes/origin/canary
+          if git merge-base --is-ancestor refs/remotes/origin/canary HEAD; then git push origin HEAD:refs/heads/canary
+          else git checkout -B cronet-canary refs/remotes/origin/canary && git merge --no-edit refs/remotes/origin/main && git push origin HEAD:refs/heads/canary; fi
           gh workflow run ci.yml --ref canary || true
           [ -n "$open" ] && gh issue close "$open" --comment "Cronet $v passed and is committed."
           echo "Committed Cronet $v to main and canary." >> "$GITHUB_STEP_SUMMARY"
