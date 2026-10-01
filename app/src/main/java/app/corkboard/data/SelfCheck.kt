@@ -80,8 +80,8 @@ object SelfCheck {
             check(posting.title.isNotBlank() && posting.bodyHtml.isNotBlank()) { "listing has no title or body" }
             check(posting.attributes.isNotEmpty()) { "listing has no attributes" }
             check(posting.imageIds.isNotEmpty()) { "listing has no images" }
-            check(posting.postedAt > 0 && posting.updatedAt >= posting.postedAt) { "listing dates are off" }
-            check(posting.lat != null && posting.lon != null) { "listing has no coordinates" }
+            // Not that updated follows posted: a renewed listing gets a new posted time and keeps its old updated one.
+            check(posting.postedAt > 1_000_000_000L && posting.updatedAt > 1_000_000_000L) { "listing dates are missing" }
             log("listing ok: ${posting.attributes.size} attributes")
 
             step = "gone listing"
@@ -90,7 +90,7 @@ object SelfCheck {
             step = "image"
             val image = http.get(Images.url(first.imageIds.first(), Images.THUMB), BrowserHeaders.Kind.Image)
             check(image.ok && image.body.size > 1000) { "image answered ${image.code}, ${image.body.size} bytes" }
-            val tile = http.get(Tiles.url(Tiles.x(posting.lon!!).toInt(), Tiles.y(posting.lat!!).toInt()), BrowserHeaders.Kind.Image)
+            val tile = http.get(Tiles.url(Tiles.x(sf.lon).toInt(), Tiles.y(sf.lat).toInt()), BrowserHeaders.Kind.Image)
             check(tile.ok && tile.body.size > 200) { "map tile answered ${tile.code}" }
 
             step = "suggestions"

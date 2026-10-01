@@ -64,15 +64,18 @@ AAR. Local builds are version code 1, below anything CI publishes. Release signi
 `CORKBOARD_KEYSTORE_PATH`, `CORKBOARD_KEYSTORE_PASSWORD` and `CORKBOARD_KEY_ALIAS` from the
 environment and falls back to the debug key without them.
 
-Debug builds take `--es theme light|dark`, take `--ez check_alerts true` to run the saved-search
+Debug builds take `--es theme light|dark`, `--ez self_check true`, take `--ez check_alerts true` to run the saved-search
 check at once instead of hours later, and log every request as `CorkboardHttp` in logcat.
 
 ## Chores
 
-- **Cronet does not update itself.** `chrome-check.yml` opens an issue each week the pinned
-  version falls behind Chrome for Android stable.
-- **Bump Cronet with Chrome.** When Chrome for Android stable moves to a new major, publish that
-  version's AAR (Vela's `cronet-runtime` workflow) and change `corkboard.cronetVersion`. A stale
-  version is a browser nobody else is running anymore.
+- **Cronet updates itself.** `cronet.yml` runs weekly: when Chrome for Android stable moves past
+  `corkboard.cronetVersion`, it fetches or packs that Cronet, builds and tests the app with it, and
+  runs the self-check on an emulator. A pass is committed to main and canary; a failure opens one
+  issue and commits nothing.
+- **The app checks itself daily.** `health.yml` runs `data/SelfCheck.kt` against the live site and
+  opens one issue when a step breaks, closing it when the check passes again. `scripts/self-check.sh
+  <debug.apk>` runs the same check on any connected emulator or phone. When it fails on a value in
+  `calibration.json`, fix that file and bump its `version`; otherwise the parsers need a change.
 - **The API is undocumented.** If parsing breaks, capture a fresh response, trim it, replace the
   listing text, and put it in `app/src/test/resources` before touching `data/Parsers.kt`.

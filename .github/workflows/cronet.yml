@@ -1,0 +1,179 @@
+name: Cronet update
+
+# Keeps the app's network stack (Cronet, pinned in gradle.properties) on the current Chrome for
+# Android stable, with nobody in the loop unless something is wrong.
+#
+# Once a week: if Chrome stable has moved past the pinned version and has been out a few days, get
+# that version's Cronet (already published by Vela, or packed here from Chromium's own builds),
+# build the app with it, and run the app's self-check against the live site on an emulator.
+#
+#   passes   the bump is committed to main and canary. The nightly cron then ships it as a
+#            nightly, and the weekly promotion as a stable, like any other change.
+#   fails    nothing is committed, and one issue is opened with what broke. Users stay on the
+#            version that works.
+#   blocked  craigslist would not answer the runner, so nothing could be judged. Nothing is
+#            committed or filed; next week tries again.
+
+on:
+  schedule:
+    - cron: "10 13 * * 3" # Wednesdays 13:10 UTC
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Chrome for Android version to move to (blank = current stable)
+        required: false
+        default: ''
+      force:
+        description: Do not wait for the version to have been out a few days
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+concurrency: cronet
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Is there a newer Chrome to move to?
+        id: v
+        run: |
+          set -euo pipefail
+          pinned="$(sed -n 's/^corkboard.cronetVersion=//p' gradle.properties)"
+          want='${{ github.event.inputs.version }}'
+          age=99
+          if [ -z "$want" ]; then
+            release="$(curl -fsS 'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1')"
+            want="$(echo "$release" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["version"])')"
+            age="$(echo "$release" | python3 -c 'import json,sys,time; print(int((time.time()*1000 - json.load(sys.stdin)[0]["time"]) / 86400000))')"
+          fi
+          case "$want" in *[!0-9.]*|"") echo "bad version: $want" >&2; exit 1 ;; esac
+          echo "pinned $pinned, stable $want (out $age days)" | tee -a "$GITHUB_STEP_SUMMARY"
+          newer="$(printf '%s\n%s\n' "$pinned" "$want" | sort -V | tail -n1)"
+          if [ "$want" = "$pinned" ] || [ "$newer" != "$want" ]; then
+            echo "Nothing to do." | tee -a "$GITHUB_STEP_SUMMARY"; echo "go=0" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # A release in its first days is still rolling out and sometimes pulled.
+          if [ "$age" -lt 4 ] && [ '${{ github.event.inputs.force }}' != 'true' ]; then
+            echo "Too new; waiting." | tee -a "$GITHUB_STEP_SUMMARY"; echo "go=0" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "go=1" >> "$GITHUB_OUTPUT"
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+          echo "version=$want" >> "$GITHUB_OUTPUT"
+
+      - name: Get that version's Cronet
+        if: steps.v.outputs.go == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          v='${{ steps.v.outputs.version }}'
+          f="app/libs/cronet-$v.aar"
+          mkdir -p app/libs
+          if gh release download cronet-runtime -p "cronet-$v.aar" -O "$f" 2>/dev/null; then
+            echo "From this repository's release."
+          elif curl -fsSL -o "$f" "https://github.com/PimpinPumpkin/Vela/releases/download/cronet-runtime/cronet-$v.aar"; then
+            echo "From Vela's release."
+          else
+            # Nobody has packed it yet: do it here, from Chromium's own builds, and publish it so
+            # every later build of this version can fetch it.
+            bash scripts/build-cronet-aar.sh "$v" app/libs
+            gh release view cronet-runtime >/dev/null 2>&1 || gh release create cronet-runtime --prerelease --title "Cronet runtime" \
+              --notes "Chromium's own prebuilt Cronet, one AAR per Chrome for Android version, fetched by the build. Not an app release."
+            gh release upload cronet-runtime "$f" --clobber
+          fi
+          test "$(stat -c%s "$f")" -gt 10000000
+          sed -i "s/^corkboard.cronetVersion=.*/corkboard.cronetVersion=$v/" gradle.properties
+
+      - uses: actions/setup-java@v6
+        if: steps.v.outputs.go == '1'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v4
+        if: steps.v.outputs.go == '1'
+        with:
+          packages: platform-tools platforms;android-37.0
+
+      - uses: gradle/actions/setup-gradle@v6
+        if: steps.v.outputs.go == '1'
+
+      - name: Tests and a build with the new Cronet
+        if: steps.v.outputs.go == '1'
+        id: build
+        continue-on-error: true
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease -Pabis=x86_64,arm64-v8a --no-daemon
+
+      - name: Enable KVM
+        if: steps.v.outputs.go == '1' && steps.build.outcome == 'success'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Self-check against the live site
+        if: steps.v.outputs.go == '1' && steps.build.outcome == 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash scripts/self-check.sh app/build/outputs/apk/debug/app-debug.apk self-check-out; echo $? > self-check-out/code
+
+      - name: Keep the evidence
+        if: always() && steps.v.outputs.go == '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: self-check
+          path: self-check-out/
+          if-no-files-found: ignore
+
+      - name: Commit the update, or say what went wrong
+        if: steps.v.outputs.go == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          v='${{ steps.v.outputs.version }}'
+          pinned='${{ steps.v.outputs.pinned }}'
+          if [ '${{ steps.build.outcome }}' != 'success' ]; then code=1; result="RESULT FAIL at build: the app does not build or its tests fail with Cronet $v"
+          else code="$(cat self-check-out/code 2>/dev/null || echo 1)"; result="$(cat self-check-out/result.txt 2>/dev/null || echo 'RESULT FAIL at start: no result')"; fi
+          echo "$result" >> "$GITHUB_STEP_SUMMARY"
+          open="$(gh issue list --state open --search 'Cronet update failed in:title' --json number --jq '.[0].number // empty')"
+
+          if [ "$code" = "2" ]; then
+            echo "craigslist did not answer this runner, so Cronet $v could not be judged. Trying again next week." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$code" != "0" ]; then
+            log="$(grep 'CorkboardSelfCheck' self-check-out/log.txt 2>/dev/null | sed 's/.*CorkboardSelfCheck: //' | tail -n 20)"
+            body="$(printf 'Moving from Cronet %s to %s was tried and not committed: the app stays on %s.\n\n```\n%s\n%s\n```\n\nRun: %s/%s/actions/runs/%s\n\nIf the daily health check is failing too, craigslist changed something and this is not about Cronet. Otherwise the new Cronet needs a code change before it can ship. The update is retried every week and this issue closes by itself when one goes through.' "$pinned" "$v" "$pinned" "$result" "$log" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+            [ -z "$open" ] && gh issue create --title "Cronet update failed: $pinned to $v" --body "$body"
+            exit 1
+          fi
+
+          # It works. Commit to main, bring canary along, and publish canary (a push made by a
+          # workflow does not start other workflows, so its build is asked for by name).
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gradle.properties
+          git commit -m "Update the built-in Chrome network stack to ${v%%.*}" -m "Cronet $pinned to $v. Built, tested and checked against the live site by the cronet workflow."
+          git push origin HEAD:main
+          git fetch origin canary
+          if git merge-base --is-ancestor origin/canary HEAD; then git push origin HEAD:canary
+          else git checkout -B canary origin/canary && git merge --no-edit main && git push origin canary; fi
+          gh workflow run ci.yml --ref canary || true
+          [ -n "$open" ] && gh issue close "$open" --comment "Cronet $v passed and is committed."
+          echo "Committed Cronet $v to main and canary." >> "$GITHUB_STEP_SUMMARY"
