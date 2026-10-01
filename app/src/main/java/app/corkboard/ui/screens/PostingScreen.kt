@@ -103,6 +103,7 @@ import app.corkboard.ui.theme.PriceFont
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ModalBottomSheet
@@ -273,6 +274,21 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                     else "Could not reach craigslist. This is the copy saved $savedAgo. Tap to try again.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = onBanner,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+            // A repost that took over something the user had saved: say so, because the listing the
+            // site itself still shows in their saved items there is the old, deleted one.
+            val replaced by store.replaced.collectAsStateWithLifecycle()
+            if (!gone && replaced[listing.postingId] != null) Row(
+                Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.Autorenew, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(
+                    "The seller deleted the listing you saved and posted it again. This is the new one; your heart, note and lists moved to it.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.padding(start = 12.dp),
                 )
             }

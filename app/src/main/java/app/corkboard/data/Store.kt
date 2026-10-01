@@ -291,6 +291,14 @@ class Store(context: Context) {
      */
     fun carryOver(oldId: Long, new: Listing) {
         if (oldId == new.postingId) return
+        val had = _favorites.value.any { it.postingId == oldId } || _lists.value.any { l -> l.items.any { it.postingId == oldId } } ||
+            _notes.value[oldId] != null || oldId in _hidden.value
+        if (had) {
+            // Remembered, so the new listing can always say which saved one it took the place of.
+            val next = (_replaced.value + (new.postingId to oldId)).entries.sortedByDescending { it.key }.take(300).associate { it.key to it.value }
+            write("replaced.json", replacedSerializer, next)
+            _replaced.value = next
+        }
         if (_favorites.value.any { it.postingId == oldId }) {
             val next = _favorites.value.filter { it.postingId != new.postingId }.map { if (it.postingId == oldId) new else it }
             write("favorites.json", ListSerializer(Listing.serializer()), next)
@@ -306,6 +314,12 @@ class Store(context: Context) {
         }
         if (oldId in _hidden.value) setHidden(new.postingId, true)
     }
+
+    private val replacedSerializer = kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.serializer<Long>(), kotlinx.serialization.serializer<Long>())
+    private val _replaced = MutableStateFlow(read("replaced.json", replacedSerializer).orEmpty())
+
+    /** New posting id to the id of the saved listing it replaced, for reposts that were carried over. */
+    val replaced: StateFlow<Map<Long, Long>> = _replaced.asStateFlow()
 
     // ---- recently viewed, and what is known about each listing ----
 
