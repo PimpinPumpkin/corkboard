@@ -94,6 +94,8 @@ jobs:
             echo "No keystore secret: the release APK will be debug-signed."
           fi
 
+      # No step fetches Cronet: app/build.gradle.kts downloads the pinned AAR the first time Gradle
+      # configures the project, here exactly as on a fresh clone.
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --no-daemon
 
