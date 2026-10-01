@@ -7,7 +7,27 @@ import java.net.URLEncoder
 /** Builds the URLs. Kept apart from the network so the shapes can be tested on a plain JVM. */
 object ClUrls {
     private const val API = "https://%s.craigslist.org/web/v8/"
-    private const val LOCALE = "cc=US&lang=en"
+    /** The languages the site itself is translated into. Anything else gets English. */
+    val languages: List<Pair<String, String>> = listOf(
+        "en" to "English", "es" to "Español", "fr" to "Français", "de" to "Deutsch", "it" to "Italiano",
+        "pt" to "Português", "da" to "Dansk", "fi" to "Suomi", "sv" to "Svenska", "tr" to "Türkçe",
+        "vi" to "Tiếng Việt", "ru" to "Русский", "zh" to "中文", "ja" to "日本語", "ko" to "한국말",
+    )
+
+    /**
+     * The visitor's country and language, sent with every request the way the site's page sends
+     * them. The site answers in that language: filter names, attribute labels and prices all come
+     * back translated, so the app has nothing to translate for them.
+     */
+    @Volatile var country: String = "US"
+    @Volatile var language: String = "en"
+
+    fun setLocale(country: String, language: String) {
+        this.country = country.uppercase().takeIf { it.length == 2 && it.all(Char::isLetter) } ?: "US"
+        this.language = language.lowercase().takeIf { l -> languages.any { it.first == l } } ?: "en"
+    }
+
+    private val LOCALE: String get() = "cc=$country&lang=$language"
 
     /** The site's internal number for each sort order, sent inside the `batch` parameter. */
     private val sortIds = mapOf("date" to 1, "dateoldest" to 2, "dist" to 3, "priceasc" to 4, "pricedsc" to 5, "rel" to 6, "upcoming" to 7)

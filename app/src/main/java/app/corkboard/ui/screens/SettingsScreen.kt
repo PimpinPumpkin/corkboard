@@ -10,7 +10,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.corkboard.BuildConfig
+import app.corkboard.data.ClUrls
 import app.corkboard.data.Store
 import app.corkboard.data.ThemeMode
 import app.corkboard.net.Http
@@ -51,6 +54,31 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
                     RadioButton(selected = theme == mode, onClick = { store.setTheme(mode) })
                     Text(label, style = MaterialTheme.typography.bodyLarge)
                 }
+            }
+
+            Heading("Listings language")
+            val language by store.language.collectAsStateWithLifecycle()
+            var pickLanguage by remember { mutableStateOf(false) }
+            Item(
+                ClUrls.languages.firstOrNull { it.first == language }?.second ?: "Follow the phone",
+                "craigslist translates filters, labels and categories into these languages. The listings themselves stay as their authors wrote them.",
+            ) { pickLanguage = true }
+            if (pickLanguage) {
+                AlertDialog(
+                    onDismissRequest = { pickLanguage = false },
+                    title = { Text("Listings language") },
+                    text = {
+                        Column(Modifier.verticalScroll(rememberScrollState())) {
+                            (listOf<Pair<String?, String>>(null to "Follow the phone") + ClUrls.languages).forEach { (code, name) ->
+                                Row(Modifier.fillMaxWidth().clickable { store.setLanguage(code); pickLanguage = false }, verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(selected = language == code, onClick = null, modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp))
+                                    Text(name, style = MaterialTheme.typography.bodyLarge)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { pickLanguage = false }) { Text("Cancel") } },
+                )
             }
 
             Heading("Privacy")

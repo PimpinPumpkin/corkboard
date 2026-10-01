@@ -13,5 +13,10 @@ class CorkboardApp : Application(), ImageLoaderFactory {
     val api: ClApi by lazy { ClApi(http) }
     val store: Store by lazy { Store(this) }
 
+    override fun onCreate() {
+        super.onCreate()
+        store.applyLocale()
+    }
+
     override fun newImageLoader(): ImageLoader = imageLoader(this, http)
 }

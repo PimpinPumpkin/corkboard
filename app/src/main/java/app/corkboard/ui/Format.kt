@@ -1,6 +1,7 @@
 package app.corkboard.ui
 
 import app.corkboard.data.Listing
+import app.corkboard.data.Units
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -21,13 +22,14 @@ object Format {
         }
     }
 
-    fun price(l: Listing): String? = l.priceText ?: l.price?.let { if (it == 0L) "free" else "$" + NumberFormat.getIntegerInstance(Locale.US).format(it) }
+    /** The site formats prices itself, in the area's currency; the bare number is only a fallback. */
+    fun price(l: Listing): String? = l.priceText ?: l.price?.let { NumberFormat.getIntegerInstance().format(it) }
 
-    /** The small facts under a title: "92,000 mi", "2 br", "850 sq ft". */
-    fun facts(l: Listing): String = listOfNotNull(
-        l.odometer?.let { NumberFormat.getIntegerInstance(Locale.US).format(it) + " mi" },
+    /** The small facts under a title: "92,000 mi", "2 br", "850 sq ft", in the area's own measures. */
+    fun facts(l: Listing, units: Units = Units()): String = listOfNotNull(
+        l.odometer?.let { NumberFormat.getIntegerInstance().format(it) + " " + units.distance },
         l.bedrooms?.let { "$it br" },
-        l.sqft?.let { "$it sq ft" },
+        l.sqft?.let { "$it " + if (units.area == "m") "m²" else "sq ft" },
     ).joinToString(" · ")
 
     fun count(n: Int): String = NumberFormat.getIntegerInstance(Locale.US).format(n)

@@ -35,8 +35,23 @@ data class SearchQuery(
     fun with(name: String, values: List<String>): SearchQuery =
         copy(params = if (values.isEmpty() || values.all { it.isEmpty() }) params - name else params + (name to values))
 
-    /** How many filters are set, not counting the search text and the sort order. */
-    val filterCount: Int get() = params.keys.count { it != "query" && it != "sort" }
+    val postal: String? get() = params[POSTAL]?.firstOrNull()
+    val distance: String? get() = params[DISTANCE]?.firstOrNull()
+
+    /** Searches around a postal code instead of the whole area, or the whole area again with null. */
+    fun near(postal: String?, distance: String?): SearchQuery =
+        // Sorting by distance means nothing without a point to measure from.
+        if (postal.isNullOrBlank()) copy(params = (params - POSTAL - DISTANCE).filterNot { it.key == "sort" && it.value == listOf("dist") })
+        else copy(subarea = null, params = params + (POSTAL to listOf(postal.trim())) + (DISTANCE to listOf(distance?.takeIf { it.isNotBlank() } ?: "10")))
+
+    /** How many filters are set, not counting what has its own control outside the filter sheet. */
+    val filterCount: Int get() = params.keys.count { it !in OWN_UI }
+
+    companion object {
+        const val POSTAL = "postal"
+        const val DISTANCE = "search_distance"
+        val OWN_UI = setOf("query", "sort", POSTAL, DISTANCE)
+    }
 }
 
 /** One row of search results. Rows past the first few hundred arrive without [title] and images. */
@@ -76,7 +91,15 @@ sealed interface Filter {
     data class Toggle(val name: String, override val label: String, val value: String) : Filter
 }
 
+/** Where the site says a search was run: the answer to a postal code, or just the area. */
+data class Place(val city: String, val postal: String, val radius: Int, val country: String)
+
+/** The measures an area uses, as the site reports them: "mi" or "km", "ft" or "m". */
+data class Units(val distance: String = "mi", val area: String = "ft")
+
 class SearchPage(
+    val place: Place?,
+    val units: Units,
     val total: Int,
     val items: List<Listing>,
     val filters: List<Filter>,

@@ -63,6 +63,22 @@ class Store(context: Context) {
         _theme.value = mode
     }
 
+    /** The language asked of the site: a code from [ClUrls.languages], or null to follow the phone. */
+    private val _language = MutableStateFlow(prefs.getString("language", null))
+    val language: StateFlow<String?> = _language.asStateFlow()
+
+    fun setLanguage(code: String?) {
+        prefs.edit().putString("language", code).apply()
+        _language.value = code
+        applyLocale()
+    }
+
+    /** Tells the API layer who is asking: the phone's country, and the chosen or the phone's language. */
+    fun applyLocale() {
+        val phone = java.util.Locale.getDefault()
+        ClUrls.setLocale(phone.country, _language.value ?: phone.language)
+    }
+
     private val _grid = MutableStateFlow(prefs.getBoolean("grid", true))
     val grid: StateFlow<Boolean> = _grid.asStateFlow()
 

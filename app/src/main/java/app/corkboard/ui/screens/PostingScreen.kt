@@ -6,8 +6,11 @@ import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +69,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -155,7 +160,9 @@ fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit
                     val lat = p?.lat ?: listing.lat
                     val lon = p?.lon ?: listing.lon
                     if (lat != null && lon != null) OutlinedButton(onClick = {
+                        // A maps app if the phone has one; otherwise OpenStreetMap in the browser.
                         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lon?q=$lat,$lon"))) }
+                            .onFailure { openInBrowser(context, "https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=14/$lat/$lon") }
                     }) {
                         Icon(Icons.Outlined.Map, null, Modifier.size(18.dp))
                         Spacer(Modifier.size(8.dp))
@@ -244,7 +251,7 @@ private fun Gallery(imageIds: List<String>, onOpen: (Int) -> Unit) {
     }
 }
 
-/** Full-screen photos at the largest size the site keeps, with pinch to zoom. */
+/** Full-screen photos at the largest size the site keeps, with pinch or double tap to zoom. */
 @Composable
 private fun PhotoViewer(imageIds: List<String>, start: Int, onClose: () -> Unit) {
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
@@ -264,15 +271,35 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, onClose: () -> Unit)
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
-                        // One finger only pans once the photo is zoomed in; otherwise the drag turns the page.
-                        .transformable(
-                            rememberTransformableState { zoom, pan, _ ->
-                                scale = (scale * zoom).coerceIn(1f, 5f)
-                                offset = if (scale == 1f) Offset.Zero else offset + pan
+                        .pointerInput(Unit) {
+                            // Panning stops at the photo's edges, so it can never be dragged out of sight.
+                            fun clamp(o: Offset): Offset {
+                                val maxX = size.width * (scale - 1f) / 2f
+                                val maxY = size.height * (scale - 1f) / 2f
+                                return Offset(o.x.coerceIn(-maxX, maxX), o.y.coerceIn(-maxY, maxY))
+                            }
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                do {
+                                    val event = awaitPointerEvent()
+                                    // Two fingers always zoom. One finger pans a zoomed photo and is
+                                    // otherwise left alone, so the pager underneath can turn the page.
+                                    if (event.changes.count { it.pressed } > 1 || scale > 1f) {
+                                        scale = (scale * event.calculateZoom()).coerceIn(1f, 5f)
+                                        offset = if (scale == 1f) Offset.Zero else clamp(offset + event.calculatePan())
+                                        zoomed = scale > 1f
+                                        event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                    }
+                                } while (event.changes.any { it.pressed })
+                            }
+                        }
+                        .pointerInput(Unit) {
+                            detectTapGestures(onDoubleTap = {
+                                scale = if (scale > 1f) 1f else 2.5f
+                                offset = Offset.Zero
                                 zoomed = scale > 1f
-                            },
-                            canPan = { scale > 1f },
-                        )
+                            })
+                        }
                         .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
                 )
             }

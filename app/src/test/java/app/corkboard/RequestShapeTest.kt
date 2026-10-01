@@ -68,6 +68,37 @@ class RequestShapeTest {
         assertEquals("https://sapi.craigslist.org/web/v8/suggest/makemodel?cc=US&lang=en&query=mazda%20mi", ClUrls.suggest("makemodel", "mazda mi"))
     }
 
+    @Test
+    fun `a postal search replaces the sub-area and stays out of the filter count`() {
+        val q = cars.copy(subarea = "eby").near("94103", "5")
+        assertNull(q.subarea)
+        assertEquals(0, q.filterCount)
+        assertTrue(ClUrls.search(q, 0).endsWith("searchPath=area%2Fsfbay&cat=cta&postal=94103&search_distance=5"))
+        assertEquals("10", cars.near("H2X 1Y4", "").distance)
+        assertTrue(ClUrls.search(cars.near("H2X 1Y4", "10"), 0).contains("postal=H2X%201Y4"))
+        val back = q.with("sort", listOf("dist")).near(null, null)
+        assertNull(back.sort)
+        assertEquals("priceasc", q.with("sort", listOf("priceasc")).near(null, null).sort)
+        assertNull(back.postal)
+        assertNull(back.distance)
+    }
+
+    @Test
+    fun `country and language follow the visitor, within what the site speaks`() {
+        try {
+            ClUrls.setLocale("mx", "ES")
+            assertTrue(ClUrls.search(cars, 0).contains("&cc=MX&lang=es&"))
+            assertEquals("https://rapi.craigslist.org/web/v8/postings/abc?cc=MX&lang=es", ClUrls.posting("abc"))
+            // A language the site has no translation for falls back to English; so does nonsense.
+            ClUrls.setLocale("NL", "nl")
+            assertTrue(ClUrls.search(cars, 0).contains("&cc=NL&lang=en&"))
+            ClUrls.setLocale("", "x&y=1")
+            assertTrue(ClUrls.search(cars, 0).contains("&cc=US&lang=en&"))
+        } finally {
+            ClUrls.setLocale("US", "en")
+        }
+    }
+
     // ---- headers ----
 
     @Test

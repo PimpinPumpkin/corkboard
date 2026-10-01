@@ -19,6 +19,10 @@ class ParsersTest {
     fun `car search rows are unpacked`() {
         val page = Parsers.search(fixture("search_cta.json"))
         assertEquals(301, page.total)
+        assertEquals("mi", page.units.distance)
+        assertEquals("ft", page.units.area)
+        assertEquals("SF bay area", page.place!!.city)
+        assertEquals("", page.place!!.postal)
         assertEquals(6, page.items.size)
         val first = page.items.first()
         // Ids and dates are offsets from the decode table's minimums.
@@ -135,6 +139,24 @@ class ParsersTest {
         val e = runCatching { Parsers.suggestions(body) }.exceptionOrNull()
         assertTrue(e is ApiException)
         assertEquals("suggestWeb unrecognized parameter 'cat'", e!!.message)
+    }
+
+    @Test
+    fun `a missing place is empty, not the site's zero`() {
+        val body = """{"data":{"decode":{"minPostingId":100,"minPostedDate":50,"version":2,"locations":[0,[91,"mexicocity"]],
+            "locationDescriptions":[0,"McAllen"],"neighborhoods":[0]},"totalResultCount":2,"filters":[],
+            "location":{"areaId":91,"city":"mexico city","country":"MX","postal":"","radius":60},
+            "areas":{"91":{"areaUnits":"m","currency":"MXN","distanceUnits":"km","name":"mexicocity"}},
+            "items":[[1,2,145,490000,"1:0~19.4~-99.1",0,[13,"abc"],[10,"${'$'}490,000"],"Audi"],[2,3,145,-1,"1:1~19.4~-99.1","0CI0t2",[13,"def"],"VW"]]},"errors":[]}"""
+        val page = Parsers.search(body)
+        assertEquals("", page.items[0].place)
+        assertEquals("Audi", page.items[0].title)
+        assertEquals("McAllen", page.items[1].place)
+        assertNull(page.items[1].price)
+        assertEquals("km", page.units.distance)
+        assertEquals("m", page.units.area)
+        val posting = Parsers.posting("""{"data":{"items":[{"postingId":1,"postingUuid":"abc","title":"t","body":"b","location":{"neighborhood":0,"description":"","subArea":0,"area":"mexico city"}}]},"errors":[]}""")
+        assertEquals("", posting.place)
     }
 
     @Test

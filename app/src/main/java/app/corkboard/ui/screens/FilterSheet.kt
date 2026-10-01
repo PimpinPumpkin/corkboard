@@ -110,8 +110,8 @@ fun FilterSheet(filters: List<Filter>, query: SearchQuery, api: ClApi, onApply: 
             }
             Surface(tonalElevation = 2.dp) {
                 Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // Clearing keeps what is not in this sheet: the search text, the sort order and the sub-area.
-                    TextButton(onClick = { draft = draft.copy(params = draft.params.filterKeys { it == "query" || it == "sort" }) }) { Text("Clear all") }
+                    // Clearing keeps what is not in this sheet: the search text, the sort order and the place.
+                    TextButton(onClick = { draft = draft.copy(params = draft.params.filterKeys { it in SearchQuery.OWN_UI }) }) { Text("Clear all") }
                     Spacer(Modifier.weight(1f))
                     Button(onClick = { onApply(draft) }) { Text("Show results") }
                 }

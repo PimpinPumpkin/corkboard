@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import app.corkboard.data.Images
 import app.corkboard.data.Listing
+import app.corkboard.data.Units
 import app.corkboard.ui.Format
 
 @Composable
@@ -63,11 +64,11 @@ private fun Heart(on: Boolean, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-private fun Caption(listing: Listing) {
+private fun Caption(listing: Listing, units: Units) {
     val price = Format.price(listing)
     if (price != null) Text(price, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     Text(listing.title.orEmpty(), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-    val facts = Format.facts(listing)
+    val facts = Format.facts(listing, units)
     if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     Text(
         listOf(Format.ago(listing.postedAt), listing.place).filter { it.isNotBlank() }.joinToString(" · "),
@@ -80,25 +81,25 @@ private fun Caption(listing: Listing) {
 
 /** A result as a photo-first tile, two to a row. */
 @Composable
-fun ListingTile(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavorite: () -> Unit, modifier: Modifier = Modifier) {
+fun ListingTile(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavorite: () -> Unit, modifier: Modifier = Modifier, units: Units = Units()) {
     Column(modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick)) {
         Box {
             Photo(listing, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(16.dp)))
             Heart(favorite, Modifier.align(Alignment.TopEnd).padding(6.dp), onFavorite)
         }
-        Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) { Caption(listing) }
+        Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) { Caption(listing, units) }
     }
 }
 
 /** A result as a compact row: more per screen, for categories where the title matters most. */
 @Composable
-fun ListingRow(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavorite: () -> Unit, modifier: Modifier = Modifier) {
+fun ListingRow(listing: Listing, favorite: Boolean, onClick: () -> Unit, onFavorite: () -> Unit, modifier: Modifier = Modifier, units: Units = Units()) {
     Row(modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box {
             Photo(listing, Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)))
         }
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) { Caption(listing) }
+        Column(Modifier.weight(1f)) { Caption(listing, units) }
         Icon(
             if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
             if (favorite) "Remove from favorites" else "Add to favorites",

@@ -5,6 +5,15 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import app.corkboard.data.SearchQuery
+import app.corkboard.data.Units
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,6 +103,8 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
 
     var text by rememberSaveable(query.text) { mutableStateOf(query.text) }
     var showFilters by remember { mutableStateOf(false) }
+    var showPlace by remember { mutableStateOf(false) }
+    val units = page?.units ?: Units()
     val focus = LocalFocusManager.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -120,7 +131,13 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
                         Column {
                             Text(query.categoryName, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
-                                if (page != null && !state.loading) "${Format.count(page.total)} in ${query.areaName}" else query.areaName,
+                                when {
+                                    page == null || state.loading -> query.areaName
+                                    // A postal code the site does not know is ignored without an error; say so.
+                                    query.postal != null && page.place?.postal.isNullOrEmpty() -> "${Format.count(page.total)} in ${query.areaName} · postal code not found"
+                                    query.postal != null -> "${Format.count(page.total)} near ${page.place?.city}"
+                                    else -> "${Format.count(page.total)} in ${query.areaName}"
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -183,13 +200,21 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
                             onPick = { state.run(query.with("sort", listOf(it))) },
                         )
                     }
-                    if (page != null && page.subareas.isNotEmpty()) {
-                        Picker(
-                            label = page.subareas.firstOrNull { it.value == query.subarea }?.label ?: "Whole area",
-                            icon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(18.dp)) },
-                            selected = query.subarea != null,
-                            options = listOf(Option("Whole area", "")) + page.subareas,
-                            onPick = { state.run(query.copy(subarea = it.ifEmpty { null })) },
+                    if (page != null) {
+                        val near = page.place?.takeIf { it.postal.isNotEmpty() }
+                        FilterChip(
+                            selected = query.subarea != null || query.postal != null,
+                            onClick = { showPlace = true },
+                            label = {
+                                Text(
+                                    when {
+                                        near != null -> "${near.radius} ${page.units.distance} of ${near.postal}"
+                                        query.subarea != null -> page.subareas.firstOrNull { it.value == query.subarea }?.label ?: query.subarea
+                                        else -> "Whole area"
+                                    },
+                                )
+                            },
+                            leadingIcon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(18.dp)) },
                         )
                     }
                 }
@@ -213,8 +238,8 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
             ) {
                 itemsIndexed(items, key = { _, l -> l.postingId }) { _, l ->
                     val fav = l.postingId in favoriteIds
-                    if (grid) ListingTile(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) })
-                    else ListingRow(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) })
+                    if (grid) ListingTile(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units)
+                    else ListingRow(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units)
                 }
                 if (state.hasMore) item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
@@ -226,6 +251,62 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
     if (showFilters && page != null) {
         FilterSheet(page.filters, query, api, onApply = { showFilters = false; state.run(it) }, onDismiss = { showFilters = false })
     }
+
+    if (showPlace && page != null) {
+        PlaceDialog(query, page.subareas, page.units.distance, onApply = { showPlace = false; state.run(it) }, onDismiss = { showPlace = false })
+    }
+}
+
+/**
+ * Where to search: the whole area, one of its sub-areas, or a distance around a postal code. The
+ * three exclude each other, the same as on the site.
+ */
+@Composable
+private fun PlaceDialog(query: SearchQuery, subareas: List<Option>, distanceUnit: String, onApply: (SearchQuery) -> Unit, onDismiss: () -> Unit) {
+    var postal by remember { mutableStateOf(query.postal.orEmpty()) }
+    var distance by remember { mutableStateOf(query.distance ?: "10") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Where to look") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Near a postal code", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = postal,
+                        onValueChange = { v -> postal = v.filter { it.isLetterOrDigit() || it == ' ' || it == '-' }.take(10) },
+                        modifier = Modifier.weight(1.3f),
+                        label = { Text("Postal code") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    )
+                    OutlinedTextField(
+                        value = distance,
+                        onValueChange = { v -> distance = v.filter { it.isDigit() }.take(4) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Within") },
+                        suffix = { Text(distanceUnit) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                }
+                Button(onClick = { onApply(query.near(postal, distance)) }, enabled = postal.isNotBlank(), modifier = Modifier.padding(top = 12.dp)) { Text("Search near here") }
+
+                Text("Or pick a part of ${query.areaName}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 20.dp))
+                (listOf(Option("Whole area", "")) + subareas).forEach { o ->
+                    val chosen = query.postal == null && (query.subarea ?: "") == o.value
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onApply(query.near(null, null).copy(subarea = o.value.ifEmpty { null })) },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = chosen, onClick = null, modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp))
+                        Text(o.label, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 /** The site's own labels for the price sorts are arrows made of currency signs; say it in words. */

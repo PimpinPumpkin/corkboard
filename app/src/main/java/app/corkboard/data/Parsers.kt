@@ -22,6 +22,8 @@ object Parsers {
     private fun JsonElement?.arr(): JsonArray? = this as? JsonArray
     private fun JsonElement?.prim(): JsonPrimitive? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }
     private fun JsonElement?.str(): String? = prim()?.content
+    /** A place name. The site writes a missing one as the number 0, which is not a name. */
+    private fun JsonElement?.name(): String? = prim()?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
     private fun JsonElement?.long(): Long? = prim()?.let { it.longOrNull ?: it.doubleOrNull?.toLong() }
     private fun JsonElement?.int(): Int? = prim()?.let { it.intOrNull ?: it.doubleOrNull?.toInt() }
     private fun JsonElement?.double(): Double? = prim()?.doubleOrNull
@@ -63,7 +65,12 @@ object Parsers {
         val filters = d["filters"].arr().orEmpty()
         val sortFilter = filters.firstOrNull { it.obj()?.get("name").str() == "sort" }.obj()
         val subareaFilter = filters.firstOrNull { it.obj()?.get("name").str() == "subarea" }.obj()
+        val loc = d["location"].obj()
+        // The units belong to the area searched; a search that spills into neighbors lists several.
+        val area = d["areas"].obj()?.let { it[loc?.get("areaId").str().orEmpty()] ?: it.values.firstOrNull() }.obj()
         return SearchPage(
+            place = loc?.let { Place(it["city"].str().orEmpty(), it["postal"].str().orEmpty(), it["radius"].int() ?: 0, it["country"].str().orEmpty()) },
+            units = Units(area?.get("distanceUnits").str() ?: "mi", area?.get("areaUnits").str() ?: "ft"),
             total = d["totalResultCount"].int() ?: 0,
             items = if (decode == null) emptyList() else items(d["items"].arr().orEmpty(), decode),
             filters = filters.flatMap { filter(it.obj()) },
@@ -128,8 +135,8 @@ object Parsers {
             val geo = row[4].str().orEmpty().split('~')
             val idx = geo[0].split(':').map { it.toIntOrNull() ?: 0 }
             val loc = locations.getOrNull(idx.getOrElse(0) { 0 }).arr()
-            val hood = idx.getOrNull(2)?.let { neighborhoods.getOrNull(it).str() }
-            val description = idx.getOrNull(1)?.let { descriptions.getOrNull(it).str() }
+            val hood = idx.getOrNull(2)?.let { neighborhoods.getOrNull(it).name() }
+            val description = idx.getOrNull(1)?.let { descriptions.getOrNull(it).name() }
             val price = row[3].long()
             var listing = Listing(
                 postingId = minPostingId + (row[0].long() ?: return@mapNotNull null),
@@ -138,7 +145,7 @@ object Parsers {
                 price = price?.takeIf { it >= 0 },
                 // The neighborhood is the site's own name for the place; the description is whatever
                 // the poster typed there, which for dealers is often a phone number.
-                place = hood?.takeIf { it.isNotBlank() } ?: description.orEmpty(),
+                place = hood ?: description.orEmpty(),
                 hostname = loc?.getOrNull(1).str().orEmpty(),
                 subarea = loc?.getOrNull(2).str().orEmpty(),
                 lat = geo.getOrNull(1)?.toDoubleOrNull(),
@@ -188,8 +195,8 @@ object Parsers {
         val p = data(body)["items"].arr()?.firstOrNull().obj() ?: throw ApiException("This listing is no longer available")
         val loc = p["location"].obj()
         val place = listOfNotNull(
-            loc?.get("neighborhood").str()?.takeIf { it.isNotBlank() } ?: loc?.get("description").str()?.takeIf { it.isNotBlank() },
-            loc?.get("subArea").str()?.takeIf { it.isNotBlank() },
+            loc?.get("neighborhood").name() ?: loc?.get("description").name(),
+            loc?.get("subArea").name(),
         ).joinToString(", ")
         return Posting(
             postingId = p["postingId"].long() ?: 0L,
