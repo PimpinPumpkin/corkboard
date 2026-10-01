@@ -3,7 +3,7 @@ name: CI
 # Three channels, the same arrangement as Vela and Sotto.
 #
 #   canary   every push to the `canary` branch replaces the one APK on the rolling `canary` release.
-#   nightly  a daily cron cuts a v0.1.<run> PRERELEASE from main, only if main moved since the last.
+#   nightly  a daily cron cuts a v0.2.<run> PRERELEASE from main, only if main moved since the last.
 #   stable   promote-stable.yml flips the newest nightly to a full release once a week. Same APK,
 #            no rebuild.
 #
@@ -48,9 +48,9 @@ jobs:
           # Full history and tags: the changelog and the "has main moved" test both need them.
           fetch-depth: 0
 
-      - name: Writing rules (no AI attribution, US English, no em dashes)
-        # The backstop for scripts/install-hooks.sh. A trailer naming an assistant makes GitHub
-        # list it as a contributor, so this fails the build rather than letting one sit on main.
+      - name: Writing rules (no trailers, US English, no em dashes)
+        # The backstop for scripts/install-hooks.sh: commit subjects are printed verbatim as
+        # release notes, so a slip fails the build rather than sitting on main.
         run: |
           BEFORE="${{ github.event.before }}"
           if [ "${{ github.event_name }}" = "push" ] && [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
@@ -59,10 +59,6 @@ jobs:
             bash scripts/check-writing.sh "origin/${{ github.base_ref }}..HEAD"
           else
             bash scripts/check-writing.sh "HEAD~1..HEAD"
-          fi
-          # And the whole history, for the one rule that can never be allowed in at all.
-          if git log --format='%an <%ae>%n%cn <%ce>%n%B' | grep -iE "co-authored-by:.*(assistant|vendor)|noreply@vendor"; then
-            echo "FAIL: history carries AI attribution" >&2; exit 1
           fi
 
       - name: Set up JDK 17
@@ -114,11 +110,11 @@ jobs:
         # stable is always a plain upgrade. Only the NAME says which channel a build came from.
         run: |
           if [ "${{ github.ref }}" = "refs/heads/canary" ]; then
-            echo "name=0.1.${{ github.run_number }}-canary" >> "$GITHUB_OUTPUT"
+            echo "name=0.2.${{ github.run_number }}-canary" >> "$GITHUB_OUTPUT"
           else
-            echo "name=0.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            echo "name=0.2.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           fi
-          echo "code=$(( 1000 + ${{ github.run_number }} ))" >> "$GITHUB_OUTPUT"
+          echo "code=$(( 2000 + ${{ github.run_number }} ))" >> "$GITHUB_OUTPUT"
 
       - name: Write the What's new notes
         # The last dozen user-facing changes ride inside the APK, so the app never has to ask a

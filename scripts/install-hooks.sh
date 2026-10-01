@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the git hooks that enforce the repo's writing rules locally, so a slip is caught BEFORE
-# it is public. A commit message cannot be amended once it is pushed, and an attribution trailer
+# it is public. A commit message cannot be amended once it is pushed, and a co-author trailer
 # that reaches GitHub lists its subject as a contributor for good.
 #
 #   bash scripts/install-hooks.sh
@@ -11,15 +11,15 @@ mkdir -p "$HOOKS"
 # Refuses the commit itself, so the bad message never exists to be pushed.
 cat > "$HOOKS/commit-msg" <<'HOOK'
 #!/usr/bin/env bash
-if grep -iqE "co-authored-by:.*(assistant|vendor|copilot|openai)|generated with \[?assistant|noreply@vendor|🤖" "$1"; then
-  echo "commit refused: the message carries AI attribution. Remove the trailer and commit again." >&2
+if grep -iqE "^co-authored-by:|generated with|🤖" "$1"; then
+  echo "commit refused: the message carries a co-author trailer or a generated-with line. Remove it and commit again." >&2
   exit 1
 fi
 HOOK
 
 cat > "$HOOKS/pre-push" <<'HOOK'
 #!/usr/bin/env bash
-# No AI attribution, US English, no em dashes. Installed by scripts/install-hooks.sh.
+# No trailers, US English, no em dashes. Installed by scripts/install-hooks.sh.
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 [ -f "$ROOT/scripts/check-writing.sh" ] || exit 0

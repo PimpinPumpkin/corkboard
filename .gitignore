@@ -14,6 +14,3 @@ keystore.properties
 app/libs/*.aar
 # Written by CI from the commit log just before a release build; local builds have none.
 app/src/main/assets/whatsnew.txt
-# Local notes for coding assistants. The project's rules live in docs/DEVELOPMENT.md.
-assistant.md
-.assistant/

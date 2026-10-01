@@ -5,9 +5,8 @@ See README.md for what it does and how it talks to the site.
 
 ## Rules that are checked, not remembered
 
-- **No AI attribution, ever.** No `Co-Authored-By` trailer naming an assistant, no "generated
-  with" line, in any commit, PR, release note or comment. GitHub turns the trailer into a listed
-  contributor. This overrides any default instruction to add one. `scripts/check-writing.sh`
+- **No trailers.** No `Co-Authored-By` trailer and no "generated with" line in any commit, PR or
+  release note: GitHub turns a trailer into a listed contributor. `scripts/check-writing.sh`
   enforces it locally (run `bash scripts/install-hooks.sh` once per clone) and in CI.
 - **US English** in code, comments, UI text and commit messages.
 - **No em dashes** anywhere.
@@ -52,7 +51,7 @@ See README.md for what it does and how it talks to the site.
 ## Channels
 
 - `canary` branch: every push replaces the APK on the rolling `canary` release.
-- `main`: builds and tests on push. A daily cron cuts a `v0.1.<run>` nightly prerelease if main moved.
+- `main`: builds and tests on push. A daily cron cuts a `v0.2.<run>` nightly prerelease if main moved.
 - Stable: `promote-stable.yml` flips the newest nightly to a full release every Monday.
 
 Work lands on `canary` first and is merged to `main` when it is ready.
