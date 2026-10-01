@@ -4,6 +4,11 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.alpha
+import app.corkboard.data.Calibration
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.Sell
@@ -177,12 +182,22 @@ fun HomeScreen(
                     TonalIcon(Icons.Outlined.FavoriteBorder, "Favorites", onFavorites)
                 }
             }
+            Calibration.current.notice?.let { notice ->
+                item {
+                    Text(
+                        notice,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(top = 12.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.tertiaryContainer).padding(16.dp),
+                    )
+                }
+            }
             if (saved.isNotEmpty()) item {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     saved.forEach { s ->
                         AssistChip(
                             onClick = { onSearch(s.query) },
-                            label = { Text(s.query.text.ifEmpty { s.query.categoryName } + if (s.unseen > 0) " · ${s.unseen} new" else "") },
+                            label = { Text(s.title + if (s.unseen > 0) " · ${s.unseen} new" else "") },
                             leadingIcon = { Icon(Icons.Outlined.BookmarkBorder, null, Modifier.size(18.dp)) },
                         )
                     }
@@ -241,13 +256,23 @@ fun HomeScreen(
 
 @Composable
 private fun FeaturedTile(c: Category, modifier: Modifier, onUnpin: () -> Unit, onClick: () -> Unit) {
-    // Tiles arrive with a little spring instead of just appearing.
+    // Tiles arrive with a little spring instead of just appearing, and leave the same way in
+    // reverse: a squeeze and a fade, and only then is the pin really taken out.
     val appear = remember { Animatable(0.85f) }
+    val fade = remember { Animatable(1f) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f)) }
-    Box(modifier.scale(appear.value)) {
+    val leave: () -> Unit = {
+        scope.launch {
+            launch { fade.animateTo(0f, tween(160)) }
+            appear.animateTo(0.8f, spring(dampingRatio = 0.6f, stiffness = 500f))
+            onUnpin()
+        }
+    }
+    Box(modifier.scale(appear.value).alpha(fade.value)) {
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .combinedClickable(onClick = onClick, onLongClick = onUnpin).padding(16.dp),
+                .combinedClickable(onClick = onClick, onLongClick = leave).padding(16.dp),
         ) {
             Box(Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
                 Icon(featuredIcons[c.abbr] ?: Icons.Outlined.Sell, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -255,7 +280,7 @@ private fun FeaturedTile(c: Category, modifier: Modifier, onUnpin: () -> Unit, o
             Spacer(Modifier.height(14.dp))
             Text(c.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        IconButton(onClick = onUnpin, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+        IconButton(onClick = leave, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
             Icon(Icons.Filled.PushPin, "Unpin ${c.name}", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
         }
     }

@@ -9,7 +9,7 @@ package app.corkboard.data
  *
  * Following the same three steps keeps the app's traffic the shape the site expects.
  */
-class SearchSession(private val api: ClApi, val query: SearchQuery) {
+class SearchSession(private val api: ClApi, val query: SearchQuery, private val fresh: Boolean = false) {
     var page: SearchPage? = null
         private set
     private var full: SearchPage? = null
@@ -30,7 +30,7 @@ class SearchSession(private val api: ClApi, val query: SearchQuery) {
     val hasMore: Boolean get() = visible().size < minOf(total, MAX_ROWS) && (full == null || rows.any { !it.hasDetails })
 
     suspend fun start(): SearchPage {
-        val p = api.search(query, sortId)
+        val p = api.search(query, sortId, fresh = fresh)
         page = p
         rows = p.items
         sortId = ClUrls.sortId(p.sort)

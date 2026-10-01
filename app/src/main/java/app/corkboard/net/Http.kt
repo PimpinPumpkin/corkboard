@@ -52,7 +52,8 @@ class Http(context: Context) {
         return BrowserHeaders.acceptLanguage(List(locales.size()) { locales[it].toLanguageTag() })
     }
 
-    suspend fun get(url: String, kind: BrowserHeaders.Kind): HttpResponse = suspendCancellableCoroutine { cont ->
+    /** [fresh] skips the cache, the way pulling down to reload a page does. */
+    suspend fun get(url: String, kind: BrowserHeaders.Kind, fresh: Boolean = false): HttpResponse = suspendCancellableCoroutine { cont ->
         val out = ByteArrayOutputStream()
         val host = URI(url).host.orEmpty()
         val callback = object : UrlRequest.Callback() {
@@ -91,6 +92,7 @@ class Http(context: Context) {
         BrowserHeaders.headers(kind, BuildConfig.CRONET_VERSION, acceptLanguage()).forEach { (k, v) -> builder.addHeader(k, v) }
         // Images are fetched without credentials by a page, the API with them.
         if (kind == BrowserHeaders.Kind.Api) cookies.header(host)?.let { builder.addHeader("Cookie", it) }
+        if (fresh) builder.disableCache()
         val request = builder.build()
         cont.invokeOnCancellation { request.cancel() }
         request.start()

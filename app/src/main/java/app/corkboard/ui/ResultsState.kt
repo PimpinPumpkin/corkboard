@@ -42,10 +42,20 @@ class ResultsState(private val api: ClApi, private val store: Store, initial: Se
         run(initial)
     }
 
-    fun run(q: SearchQuery) {
+    /** True while a pull-to-refresh is in flight, so the list stays on screen under the spinner. */
+    var refreshing by mutableStateOf(false)
+        private set
+
+    /** Asks the site again, past the cache. */
+    fun refresh() {
+        refreshing = true
+        run(query, fresh = true)
+    }
+
+    fun run(q: SearchQuery, fresh: Boolean = false) {
         query = q
         job?.cancel()
-        val s = SearchSession(api, q)
+        val s = SearchSession(api, q, fresh)
         session = s
         loading = true
         error = null
@@ -64,10 +74,10 @@ class ResultsState(private val api: ClApi, private val store: Store, initial: Se
                 throw e
             } catch (e: Exception) {
                 error = e.message ?: "Something went wrong"
-                items = emptyList()
-                hasMore = false
+                // A failed refresh keeps what was already on screen.
+                if (!fresh) { items = emptyList(); hasMore = false } else error = null
             } finally {
-                if (session === s) loading = false
+                if (session === s) { loading = false; refreshing = false }
             }
         }
     }

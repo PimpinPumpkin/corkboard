@@ -40,15 +40,15 @@ object Backup {
     }
 
     /**
-     * Replaces the contents of [store] and [archive] with the backup's and returns its settings,
-     * or returns null, having changed nothing, when the file is not a Corkboard backup.
+     * Unpacks a backup into [staging] (as `store/` and `archive/`) and returns its settings, or
+     * returns null when the file is not a Corkboard backup. Nothing outside [staging] is touched.
      */
-    fun restore(input: InputStream, store: File, archive: File): Map<String, String>? {
-        // Unpack beside the real folders first, so a bad or cut-off file cannot leave things half replaced.
-        val staging = File(store.parentFile, "restore.tmp").apply { deleteRecursively(); mkdirs() }
+    fun unpack(input: InputStream, staging: File): Map<String, String>? {
+        staging.deleteRecursively()
+        staging.mkdirs()
         var marked = false
         var settings: Map<String, String> = emptyMap()
-        try {
+        return try {
             ZipInputStream(input).use { zip ->
                 while (true) {
                     val entry = zip.nextEntry ?: break
@@ -62,15 +62,27 @@ object Backup {
                     }
                 }
             }
-            if (!marked) return null
+            if (marked) settings else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Replaces the contents of [store] and [archive] with the backup's and returns its settings,
+     * or returns null, having changed nothing, when the file is not a Corkboard backup.
+     */
+    fun restore(input: InputStream, store: File, archive: File): Map<String, String>? {
+        // Unpacked beside the real folders first, so a bad or cut-off file cannot leave things half replaced.
+        val staging = File(store.parentFile, "restore.tmp")
+        try {
+            val settings = unpack(input, staging) ?: return null
             for ((prefix, dir) in listOf("store" to store, "archive" to archive)) {
                 dir.deleteRecursively()
                 val from = File(staging, prefix)
                 if (from.exists()) from.copyRecursively(dir, overwrite = true) else dir.mkdirs()
             }
             return settings
-        } catch (e: Exception) {
-            return null
         } finally {
             staging.deleteRecursively()
         }

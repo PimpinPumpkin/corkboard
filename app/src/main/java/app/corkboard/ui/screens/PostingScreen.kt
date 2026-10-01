@@ -111,6 +111,15 @@ import app.corkboard.data.Snapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.layout.onSizeChanged
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 
 private fun openInBrowser(context: Context, url: String) {
@@ -141,6 +150,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
     var snapshot by remember { mutableStateOf<Snapshot?>(null) }
     var gone by remember { mutableStateOf(false) }
     var offline by remember { mutableStateOf(false) }
+    var refreshing by remember { mutableStateOf(false) }
     var listPicker by remember { mutableStateOf(false) }
     val lists by store.lists.collectAsStateWithLifecycle()
 
@@ -154,7 +164,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
             return@LaunchedEffect
         }
         try {
-            val body = api.postingRaw(uuid)
+            val body = api.postingRaw(uuid, fresh = refreshing)
             val fresh = Parsers.posting(body)
             snapshot = withContext(Dispatchers.IO) { archive.save(uuid, body, fresh.priceText) }
             gone = false
@@ -178,6 +188,8 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
             } else {
                 error = e.message ?: "Could not load this listing"
             }
+        } finally {
+            refreshing = false
         }
     }
 
@@ -232,7 +244,9 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
             }
         },
     ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())) {
+        // Pulling down asks the site for the listing again, past the five minutes a copy may be reused.
+        PullToRefreshBox(isRefreshing = refreshing, onRefresh = { refreshing = true; attempt++ }, modifier = Modifier.fillMaxSize().padding(pad)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             if (gone || offline) Row(
                 Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (gone) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh).clickable(enabled = offline) { attempt++ }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -374,6 +388,7 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                 }
             }
         }
+        }
     }
 
     viewer?.let { start -> PhotoViewer(imageIds, start, photo = { i -> if (gone) opened.uuid?.let { archive.photo(it, i) } else null }, onClose = { viewer = null }) }
@@ -409,9 +424,33 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, photo: (Int) -> File
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val pager = rememberPagerState(initialPage = start) { imageIds.size }
         var zoomed by remember { mutableStateOf(false) }
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        // Dragging down pulls the photo away under the finger and lets go of it: far enough or fast
+        // enough and it flies off and the viewer closes, otherwise it springs back.
+        val scope = rememberCoroutineScope()
+        val drag = remember { Animatable(0f) }
+        var height by remember { mutableIntStateOf(1) }
+        val away = (kotlin.math.abs(drag.value) / (height * 0.5f)).coerceIn(0f, 1f)
+        Box(
+            Modifier.fillMaxSize().onSizeChanged { height = it.height.coerceAtLeast(1) }.background(Color.Black.copy(alpha = 1f - 0.85f * away))
+                .draggable(
+                    state = rememberDraggableState { delta -> scope.launch { drag.snapTo(drag.value + delta) } },
+                    orientation = Orientation.Vertical,
+                    enabled = !zoomed,
+                    onDragStopped = { velocity ->
+                        val leave = kotlin.math.abs(drag.value) > height * 0.18f || kotlin.math.abs(velocity) > 1800f
+                        if (leave) {
+                            // Keeps the speed it was thrown with on the way out.
+                            val target = if (drag.value + velocity * 0.1f >= 0) height.toFloat() else -height.toFloat()
+                            drag.animateTo(target, spring(dampingRatio = 1f, stiffness = 300f), initialVelocity = velocity)
+                            onClose()
+                        } else {
+                            drag.animateTo(0f, spring(dampingRatio = 0.7f, stiffness = 400f), initialVelocity = velocity)
+                        }
+                    },
+                ),
+        ) {
             // While a photo is zoomed in, dragging pans it instead of turning the page.
-            HorizontalPager(pager, Modifier.fillMaxSize(), userScrollEnabled = !zoomed) { i ->
+            HorizontalPager(pager, Modifier.fillMaxSize().graphicsLayer { translationY = drag.value; val k = 1f - 0.12f * away; scaleX = k; scaleY = k }, userScrollEnabled = !zoomed) { i ->
                 var scale by remember { mutableFloatStateOf(1f) }
                 var offset by remember { mutableStateOf(Offset.Zero) }
                 LaunchedEffect(pager.currentPage) {
@@ -455,7 +494,7 @@ private fun PhotoViewer(imageIds: List<String>, start: Int, photo: (Int) -> File
                         .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
                 )
             }
-            IconButton(onClick = onClose, modifier = Modifier.statusBarsPadding().padding(8.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))) {
+            IconButton(onClick = onClose, modifier = Modifier.graphicsLayer { alpha = 1f - away }.statusBarsPadding().padding(8.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))) {
                 Icon(Icons.Outlined.Close, "Close", tint = Color.White)
             }
             Text(

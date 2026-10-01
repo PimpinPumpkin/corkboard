@@ -6,7 +6,7 @@ import java.net.URLEncoder
 
 /** Builds the URLs. Kept apart from the network so the shapes can be tested on a plain JVM. */
 object ClUrls {
-    private const val API = "https://%s.craigslist.org/web/v8/"
+    private val API: String get() = "https://%s.craigslist.org/web/${Calibration.current.api}/"
     /** The languages the site itself is translated into. Anything else gets English. */
     val languages: List<Pair<String, String>> = listOf(
         "en" to "English", "es" to "Español", "fr" to "Français", "de" to "Deutsch", "it" to "Italiano",
@@ -82,21 +82,21 @@ object ClUrls {
     }
 
     /** The same two sizes the site's own page asks for. */
-    const val QUICK = 360
-    const val CHUNK = 1080
+    val QUICK: Int get() = Calibration.current.quick
+    val CHUNK: Int get() = Calibration.current.chunk
 }
 
 class ClApi(private val http: Http) {
-    private suspend fun get(url: String): String {
-        val r = http.get(url, BrowserHeaders.Kind.Api)
+    private suspend fun get(url: String, fresh: Boolean = false): String {
+        val r = http.get(url, BrowserHeaders.Kind.Api, fresh)
         // Errors arrive as JSON with a message worth showing; anything else is just a status.
         if (!r.ok && r.contentType?.contains("json") != true) throw ApiException(if (r.code == 403) "craigslist is refusing requests right now. Try again later." else "craigslist answered ${r.code}")
         return r.text()
     }
 
     suspend fun areas(): List<Area> = Parsers.areas(get(ClUrls.AREAS))
-    suspend fun search(q: SearchQuery, sortId: Int, cacheTs: Long = 0, detailed: Int = ClUrls.QUICK): SearchPage =
-        Parsers.search(get(ClUrls.search(q, sortId, cacheTs, detailed)))
+    suspend fun search(q: SearchQuery, sortId: Int, cacheTs: Long = 0, detailed: Int = ClUrls.QUICK, fresh: Boolean = false): SearchPage =
+        Parsers.search(get(ClUrls.search(q, sortId, cacheTs, detailed), fresh))
 
     suspend fun batch(page: SearchPage, sortId: Int, start: Int): Map<Long, ListingDetails> =
         Parsers.batch(get(ClUrls.batch(page, sortId, start)), page.minPostingId)
@@ -118,12 +118,16 @@ class ClApi(private val http: Http) {
     suspend fun nearestHost(): String? = http.redirectTarget(ClUrls.FRONT_DOOR)?.let(ClUrls::hostOf)
 
     /** The listing as the site sends it. Kept raw so the archive can store exactly what was shown. */
-    suspend fun postingRaw(uuid: String): String {
-        val r = http.get(ClUrls.posting(uuid), BrowserHeaders.Kind.Api)
+    suspend fun postingRaw(uuid: String, fresh: Boolean = false): String {
+        val r = http.get(ClUrls.posting(uuid), BrowserHeaders.Kind.Api, fresh)
         if (r.code == 404) throw GoneException()
         if (!r.ok && r.contentType?.contains("json") != true) throw ApiException("craigslist answered ${r.code}")
         return r.text()
     }
+
+    /** Reads the project's calibration file and adopts it if it is newer. Quiet about any failure. */
+    suspend fun refreshCalibration(): String? =
+        runCatching { http.get(Calibration.URL, BrowserHeaders.Kind.Page).takeIf { it.ok }?.text() }.getOrNull()?.takeIf { Calibration.adopt(it) }
 
     suspend fun posting(uuid: String): Posting = Parsers.posting(postingRaw(uuid))
     suspend fun suggest(type: String, text: String): List<String> = Parsers.suggestions(get(ClUrls.suggest(type, text)))

@@ -89,7 +89,7 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             val fresh = page.items.count { it.postingId > saved.newestSeen && (gate == null || gate(it)) }
             if (fresh == 0 || fresh == saved.unseen) continue
             app.store.updateSaved(saved.id) { it.copy(unseen = fresh) }
-            val what = saved.query.text.ifEmpty { saved.query.categoryName }
+            val what = saved.title
             Alerts.notify(
                 applicationContext, (saved.id % Int.MAX_VALUE).toInt(),
                 // A full first page of new rows means there are more than were counted.

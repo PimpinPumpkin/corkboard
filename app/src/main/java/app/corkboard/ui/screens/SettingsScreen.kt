@@ -116,27 +116,38 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
                 backupNote ?: "One file with your favorites, lists, notes, hidden listings, saved searches, settings and saved copies of listings.",
             ) { save.launch("corkboard-backup-${java.time.LocalDate.now()}.zip") }
             Spacer(Modifier.height(10.dp))
-            Item("Restore from a backup", "Replaces everything in the app with what is in the backup file.") { open.launch(arrayOf("application/zip", "application/octet-stream")) }
+            Item("Restore from a backup", "Add a backup's contents to what is here, or replace everything with it.") { open.launch(arrayOf("application/zip", "application/octet-stream")) }
             restoring?.let { uri ->
+                fun apply(merge: Boolean) {
+                    restoring = null
+                    scope.launch {
+                        val ok = withContext(Dispatchers.IO) {
+                            runCatching { context.contentResolver.openInputStream(uri)!!.use { if (merge) store.mergeFrom(it) else store.restoreFrom(it) } }.getOrDefault(false)
+                        }
+                        if (!ok) backupNote = "That file is not a Corkboard backup. Nothing was changed."
+                        else {
+                            // What is in memory no longer matches the disk: start over from it.
+                            context.packageManager.getLaunchIntentForPackage(context.packageName)?.component?.let { context.startActivity(Intent.makeRestartActivityTask(it)) }
+                            Runtime.getRuntime().exit(0)
+                        }
+                    }
+                }
                 AlertDialog(
                     onDismissRequest = { restoring = null },
                     title = { Text("Restore this backup?") },
-                    text = { Text("Everything in the app now (favorites, lists, notes, saved searches) is replaced with what is in the file. The app then restarts.") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            restoring = null
-                            scope.launch {
-                                val ok = withContext(Dispatchers.IO) { runCatching { context.contentResolver.openInputStream(uri)!!.use { store.restoreFrom(it) } }.getOrDefault(false) }
-                                if (!ok) backupNote = "That file is not a Corkboard backup. Nothing was changed."
-                                else {
-                                    // What is in memory no longer matches the disk: start over from it.
-                                    context.packageManager.getLaunchIntentForPackage(context.packageName)?.component?.let { context.startActivity(Intent.makeRestartActivityTask(it)) }
-                                    Runtime.getRuntime().exit(0)
-                                }
-                            }
-                        }) { Text("Restore") }
+                    text = {
+                        Text(
+                            "Add to what is here keeps everything in the app and adds the backup's favorites, lists, notes, hidden listings and saved searches to it.\n\n" +
+                                "Replace everything swaps what is in the app for what is in the file, settings included.\n\nEither way the app restarts.",
+                        )
                     },
-                    dismissButton = { TextButton(onClick = { restoring = null }) { Text("Cancel") } },
+                    confirmButton = {
+                        Column(horizontalAlignment = Alignment.End) {
+                            TextButton(onClick = { apply(merge = true) }) { Text("Add to what is here") }
+                            TextButton(onClick = { apply(merge = false) }) { Text("Replace everything") }
+                            TextButton(onClick = { restoring = null }) { Text("Cancel") }
+                        }
+                    },
                 )
             }
 

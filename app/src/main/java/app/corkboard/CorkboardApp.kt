@@ -4,6 +4,11 @@ import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import app.corkboard.data.Archive
+import app.corkboard.data.Calibration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import app.corkboard.data.ClApi
 import app.corkboard.data.Store
 import app.corkboard.net.Http
@@ -20,6 +25,16 @@ class CorkboardApp : Application(), ImageLoaderFactory {
         super.onCreate()
         store.applyLocale()
         store.onKept = { archive.keep(it, api) }
+        // The calibration in force: the last one fetched if newer than what is compiled in, then a
+        // look for a newer one, at most once a day.
+        val saved = getSharedPreferences("calibration", MODE_PRIVATE)
+        saved.getString("json", null)?.let(Calibration::adopt)
+        if (System.currentTimeMillis() - saved.getLong("checked", 0) > 24 * 60 * 60 * 1000L) {
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                val fresh = api.refreshCalibration()
+                saved.edit().putLong("checked", System.currentTimeMillis()).apply { if (fresh != null) putString("json", fresh) }.apply()
+            }
+        }
         archive.prune(store.keptUuids())
     }
 

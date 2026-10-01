@@ -58,6 +58,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarHostState
@@ -245,12 +246,14 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
             state.loading && items.isEmpty() -> Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             items.isEmpty() && state.hasMore -> Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             items.isEmpty() -> Message(pad, if (foreignHidden) "Nothing found in this country. Listings from other countries are hidden." else "Nothing found. Try fewer filters or a wider area.") {}
-            else -> LazyVerticalGrid(
+            // Pulling down asks the site again, past the fifteen minutes it lets results be reused.
+            else -> PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = state::refresh, modifier = Modifier.fillMaxSize().padding(top = pad.calculateTopPadding())) {
+            LazyVerticalGrid(
                 columns = if (grid) GridCells.Adaptive(160.dp) else GridCells.Fixed(1),
                 state = gridState,
                 contentPadding = PaddingValues(
                     start = if (grid) 12.dp else 0.dp, end = if (grid) 12.dp else 0.dp,
-                    top = pad.calculateTopPadding() + 8.dp, bottom = pad.calculateBottomPadding() + 16.dp,
+                    top = 8.dp, bottom = pad.calculateBottomPadding() + 16.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(if (grid) 8.dp else 0.dp),
@@ -263,6 +266,7 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
                 if (state.hasMore) item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
                 }
+            }
             }
         }
     }

@@ -14,7 +14,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.FileOpen
+import androidx.compose.material3.OutlinedButton
+import android.provider.OpenableColumns
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Share
@@ -57,7 +61,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -107,6 +116,19 @@ fun ListsScreen(store: Store, onBack: () -> Unit, onOpen: (Shelf) -> Unit) {
     val noted by store.noted.collectAsStateWithLifecycle()
     val lists by store.lists.collectAsStateWithLifecycle()
     var creating by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var importNote by remember { mutableStateOf<String?>(null) }
+    val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val rows = runCatching { context.contentResolver.openInputStream(uri)!!.use { Export.listings(it.readBytes().toString(Charsets.UTF_8)) } }.getOrDefault(emptyList())
+        importNote = if (rows.isEmpty()) "No listings found in that file. It needs a Link column with craigslist links."
+        else {
+            // The list takes the file's name: "trucks-under-10k.csv" becomes "trucks under 10k".
+            val fileName = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            val list = store.importList(fileName.orEmpty().substringBeforeLast('.').replace('-', ' ').replace('_', ' '), rows)
+            "Imported ${list.items.size} " + (if (list.items.size == 1) "listing" else "listings") + " into \"${list.name}\"."
+        }
+    }
     ListScaffold("Saved listings", onBack, null) { pad ->
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding() + 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item { ShelfCard(Icons.Outlined.FavoriteBorder, "Favorites", favorites.size, favorites.firstOrNull()) { onOpen(Shelf.Favorites) } }
@@ -115,10 +137,18 @@ fun ListsScreen(store: Store, onBack: () -> Unit, onOpen: (Shelf) -> Unit) {
                 ShelfCard(Icons.AutoMirrored.Outlined.ListAlt, l.name, l.items.size, l.items.firstOrNull(), Modifier.animateItem()) { onOpen(Shelf.Custom(l.id)) }
             }
             item {
-                FilledTonalButton(onClick = { creating = true }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                    Icon(Icons.Outlined.Add, null)
-                    Text("New list", modifier = Modifier.padding(start = 8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilledTonalButton(onClick = { creating = true }, modifier = Modifier.weight(1f).height(56.dp)) {
+                        Icon(Icons.Outlined.Add, null)
+                        Text("New list", modifier = Modifier.padding(start = 8.dp))
+                    }
+                    // A spreadsheet saved from a list here, or one laid out the same way.
+                    OutlinedButton(onClick = { import.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/octet-stream")) }, modifier = Modifier.weight(1f).height(56.dp)) {
+                        Icon(Icons.Outlined.FileOpen, null)
+                        Text("Import", modifier = Modifier.padding(start = 8.dp))
+                    }
                 }
+                importNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp, start = 4.dp)) }
             }
         }
     }
@@ -147,12 +177,23 @@ private fun ShelfCard(icon: ImageVector, name: String, count: Int, cover: Listin
 
 @Composable
 private fun NameDialog(title: String, initial: String, confirm: String, onDismiss: () -> Unit, onDone: (String) -> Unit) {
-    var name by remember { mutableStateOf(initial) }
+    // Opens with the old name selected and the keyboard up, so typing replaces it outright.
+    var name by remember { mutableStateOf(TextFieldValue(initial, TextRange(0, initial.length))) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = { OutlinedTextField(value = name, onValueChange = { name = it.take(60) }, singleLine = true, label = { Text("Name") }) },
-        confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { onDone(name) }) { Text(confirm) } },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.copy(text = it.text.take(60)) },
+                singleLine = true,
+                label = { Text("Name") },
+                modifier = Modifier.focusRequester(focus),
+            )
+        },
+        confirmButton = { TextButton(enabled = name.text.isNotBlank(), onClick = { onDone(name.text) }) { Text(confirm) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
@@ -244,6 +285,10 @@ fun ShelfScreen(shelf: Shelf, store: Store, onBack: () -> Unit, onOpen: (Listing
 fun SavedScreen(store: Store, onBack: () -> Unit, onOpen: (SearchQuery) -> Unit) {
     val saved by store.saved.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var renaming by remember { mutableStateOf<SavedSearch?>(null) }
+    renaming?.let { s ->
+        NameDialog("Name this search", s.name ?: s.title, "Save", onDismiss = { renaming = null }) { store.renameSaved(s.id, it); renaming = null }
+    }
     ListScaffold("Saved searches", onBack, if (saved.isEmpty()) "Tap the bookmark on any search to save it and hear about new listings." else null) { pad ->
         LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding() + 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (saved.any { it.alerts }) item { AlertsNote() }
@@ -253,6 +298,7 @@ fun SavedScreen(store: Store, onBack: () -> Unit, onOpen: (SearchQuery) -> Unit)
                     onOpen = { onOpen(s.query) },
                     onAlerts = { store.updateSaved(s.id) { it.copy(alerts = !it.alerts) }; Alerts.schedule(context) },
                     onDelete = { store.removeSaved(s.id); Alerts.schedule(context) },
+                    onRename = { renaming = s },
                 )
             }
         }
@@ -261,7 +307,7 @@ fun SavedScreen(store: Store, onBack: () -> Unit, onOpen: (SearchQuery) -> Unit)
 
 /** "Cars & trucks · SF bay area" over a line listing what the search narrows by. */
 @Composable
-private fun SavedRow(s: SavedSearch, onOpen: () -> Unit, onAlerts: () -> Unit, onDelete: () -> Unit) {
+private fun SavedRow(s: SavedSearch, onOpen: () -> Unit, onAlerts: () -> Unit, onDelete: () -> Unit, onRename: () -> Unit) {
     val q = s.query
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onOpen).padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
@@ -269,16 +315,18 @@ private fun SavedRow(s: SavedSearch, onOpen: () -> Unit, onAlerts: () -> Unit, o
     ) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(q.text.ifEmpty { q.categoryName }, style = MaterialTheme.typography.titleMedium)
+                Text(s.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (s.unseen > 0) Badge(Modifier.padding(start = 8.dp)) { Text("${s.unseen} new") }
             }
             val detail = listOfNotNull(
-                q.categoryName.takeIf { q.text.isNotEmpty() },
+                q.text.takeIf { it.isNotEmpty() && s.title != it },
+                q.categoryName.takeIf { s.title != it },
                 q.areaName,
                 q.filterCount.takeIf { it > 0 }?.let { if (it == 1) "1 filter" else "$it filters" },
             ).joinToString(" · ")
             Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        IconButton(onClick = onRename) { Icon(Icons.Outlined.Edit, "Rename saved search") }
         IconButton(onClick = onAlerts) {
             Icon(if (s.alerts) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff, if (s.alerts) "Turn alerts off" else "Turn alerts on")
         }

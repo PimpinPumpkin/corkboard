@@ -176,14 +176,17 @@ object Parsers {
         }
     }
 
-    private fun tagged(l: Listing, field: JsonArray): Listing = when (field.firstOrNull().int()) {
-        4 -> l.copy(imageIds = field.drop(1).mapNotNull { it.str() })
-        5 -> l.copy(bedrooms = field.getOrNull(1).int()?.takeIf { it > 0 }, sqft = field.getOrNull(2).int()?.takeIf { it > 0 })
-        6 -> l.copy(slug = field.getOrNull(1).str())
-        9 -> l.copy(odometer = field.getOrNull(1).long())
-        10 -> l.copy(priceText = field.getOrNull(1).str())
-        13 -> l.copy(uuid = field.getOrNull(1).str())
-        else -> l
+    private fun tagged(l: Listing, field: JsonArray): Listing {
+        val c = Calibration.current
+        return when (field.firstOrNull().int()) {
+            c.tagImages -> l.copy(imageIds = field.drop(1).mapNotNull { it.str() })
+            c.tagHousing -> l.copy(bedrooms = field.getOrNull(1).int()?.takeIf { it > 0 }, sqft = field.getOrNull(2).int()?.takeIf { it > 0 })
+            c.tagSlug -> l.copy(slug = field.getOrNull(1).str())
+            c.tagOdometer -> l.copy(odometer = field.getOrNull(1).long())
+            c.tagPrice -> l.copy(priceText = field.getOrNull(1).str())
+            c.tagUuid -> l.copy(uuid = field.getOrNull(1).str())
+            else -> l
+        }
     }
 
     /** A details batch: `[idOffset, title, imageIds, ...tagged fields]` per row, keyed here by posting id. */

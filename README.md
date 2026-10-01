@@ -30,13 +30,13 @@ Android 10 or later. Tap a button, install, done. No account.
 - **A map on every listing**, with no maps app needed.
 - **Favorites, your own lists, and private notes.** Share a list or save it as a spreadsheet.
 - **Hide listings** you have seen enough of.
-- **Back up and restore** everything to one file, for a new phone or for safekeeping.
+- **Back up and restore** everything to one file, and import a list from a spreadsheet.
 - **Deleted listings stay readable**, and a changed price shows what it was.
 - **See when a seller edits a listing.**
 - **Saved searches with alerts**, checked by the phone itself.
 - **Pin your categories** to the home screen.
 - **Works anywhere craigslist does**, in fifteen languages.
-- **Private.** No Corkboard server, no tracking, no account. The app talks only to craigslist.
+- **Private.** No Corkboard server, no tracking, no account.
 
 Replying and posting open in your browser.
 
@@ -125,7 +125,8 @@ there is no server watching craigslist for you and no push message to wake the a
 <br>
 
 There is no Corkboard server. Nothing you do in the app is sent to anyone but craigslist, and
-craigslist sees what it would see from a browser.
+craigslist sees what it would see from a browser. The one other request the app makes is for a
+settings file kept in this repository.
 
 | What you do | Who hears about it |
 | --- | --- |
@@ -134,6 +135,7 @@ craigslist sees what it would see from a browser.
 | First launch | **craigslist**, once, to learn which site is nearest your network address |
 | Tap "Use my location" | **craigslist**, with coordinates rounded to about a kilometer. Only when you tap it |
 | Heart, hide, note, add to a list, save a search | **Nobody.** It stays in the app's private storage |
+| Once a day, in the background | **GitHub**, for a small settings file from this repository that lets a craigslist change be fixed without an app update. It says nothing about you |
 | Saved-search alerts | **craigslist**, the same search a few times a day. No push service in between |
 | Reply to a listing | **Your browser** takes over |
 

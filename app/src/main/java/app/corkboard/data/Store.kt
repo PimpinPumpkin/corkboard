@@ -17,7 +17,11 @@ data class SavedSearch(
     /** The newest posting id already seen for this search; anything above it is new. */
     val newestSeen: Long = 0,
     val unseen: Int = 0,
-)
+    /** The user's own name for it; without one it is called by its search text or category. */
+    val name: String? = null,
+) {
+    val title: String get() = name?.takeIf { it.isNotBlank() } ?: query.text.ifEmpty { query.categoryName }
+}
 
 enum class ThemeMode { System, Light, Dark }
 
@@ -66,6 +70,57 @@ class Store(context: Context) {
         }.commit()
         return true
     }
+
+    /**
+     * Adds a backup's contents to what is already here instead of replacing it: favorites, lists,
+     * notes, hidden listings and saved searches from both are kept. Where the two disagree (a note
+     * on the same listing, a list with the same id) what is on this phone wins. Settings and the
+     * chosen place are left alone. True if it was a backup; the app must then be restarted.
+     */
+    fun mergeFrom(input: java.io.InputStream): Boolean {
+        val staging = File(dir.parentFile, "merge.tmp")
+        try {
+            Backup.unpack(input, staging) ?: return false
+            val theirs = File(staging, "store")
+            fun <T> their(name: String, serializer: kotlinx.serialization.KSerializer<T>): T? =
+                runCatching { json.decodeFromString(serializer, File(theirs, name).readText()) }.getOrNull()
+            val listings = ListSerializer(Listing.serializer())
+            val longs = ListSerializer(kotlinx.serialization.serializer<Long>())
+
+            write("favorites.json", listings, (_favorites.value + their("favorites.json", listings).orEmpty()).distinctBy { it.postingId })
+            write("noted.json", listings, (_noted.value + their("noted.json", listings).orEmpty()).distinctBy { it.postingId })
+            write("notes.json", noteSerializer, their("notes.json", noteSerializer).orEmpty() + _notes.value)
+            write("hidden.json", longs, (_hidden.value + their("hidden.json", longs).orEmpty()).distinct().sortedDescending().take(1000))
+            val mine = _lists.value
+            val merged = mine.map { l ->
+                val other = their("lists.json", ListSerializer(UserList.serializer())).orEmpty().firstOrNull { it.id == l.id }
+                if (other == null) l else l.copy(items = (l.items + other.items).distinctBy { it.postingId })
+            } + their("lists.json", ListSerializer(UserList.serializer())).orEmpty().filter { o -> mine.none { it.id == o.id } }
+            write("lists.json", ListSerializer(UserList.serializer()), merged)
+            val searches = ListSerializer(SavedSearch.serializer())
+            write("saved.json", searches, (_saved.value + their("saved.json", searches).orEmpty()).distinctBy { it.query })
+
+            // Saved copies of listings: bring over the ones this phone does not have.
+            val archive = File(dir.parentFile, "archive")
+            File(staging, "archive").takeIf { it.exists() }?.walkTopDown()?.filter { it.isFile }?.forEach { f ->
+                val to = File(archive, f.relativeTo(File(staging, "archive")).path)
+                if (!to.exists()) { to.parentFile?.mkdirs(); f.copyTo(to) }
+            }
+            return true
+        } finally {
+            staging.deleteRecursively()
+        }
+    }
+
+    /** Makes a new list out of rows read from a spreadsheet, with their notes. */
+    fun importList(name: String, rows: List<Pair<Listing, String>>): UserList {
+        val list = UserList(System.currentTimeMillis(), name.trim().ifEmpty { "Imported list" }, rows.map { it.first }.distinctBy { it.postingId })
+        setLists(_lists.value + list)
+        rows.forEach { (l, note) -> if (note.isNotBlank() && _notes.value[l.postingId] == null) setNote(l, note) }
+        return list
+    }
+
+    fun renameSaved(id: Long, name: String) = updateSaved(id) { it.copy(name = name.trim().ifEmpty { null }) }
 
     // ---- area ----
 

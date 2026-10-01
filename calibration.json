@@ -1,0 +1,14 @@
+{
+  "_comment": "Corkboard calibration, remotely updatable. The app reads this file once a day and adopts it when 'version' is higher than the one it has. To ship a fix without an app update: change the drifted value, bump 'version', commit to main. It can only retune these values; see app/src/main/java/app/corkboard/data/Calibration.kt.",
+  "version": 1,
+  "api": "v8",
+  "quick": 360,
+  "chunk": 1080,
+  "tagImages": 4,
+  "tagHousing": 5,
+  "tagSlug": 6,
+  "tagOdometer": 9,
+  "tagPrice": 10,
+  "tagUuid": 13,
+  "notice": null
+}

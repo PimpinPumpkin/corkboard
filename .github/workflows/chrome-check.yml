@@ -1,0 +1,48 @@
+name: Chrome version check
+
+# The app claims to be the Chrome whose network stack (Cronet) it ships, pinned in
+# gradle.properties. Chrome moves about every four weeks and nothing moves the pin by itself, so
+# once a week this compares the two and opens an issue when the pin has fallen a major behind.
+# A week of grace: a brand-new major is still a minority of real Chrome installs.
+
+on:
+  schedule:
+    - cron: "0 15 * * 2" # Tuesdays 15:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the pinned Cronet with Chrome for Android stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pinned="$(sed -n 's/^corkboard.cronetVersion=//p' gradle.properties)"
+          release="$(curl -fsS 'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1')"
+          stable="$(echo "$release" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["version"])')"
+          age_days="$(echo "$release" | python3 -c 'import json,sys,time; print(int((time.time()*1000 - json.load(sys.stdin)[0]["time"]) / 86400000))')"
+          echo "pinned $pinned, stable $stable (out $age_days days)" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "${stable%%.*}" -le "${pinned%%.*}" ] || [ "$age_days" -lt 7 ]; then
+            echo "Up to date." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          title="Cronet is behind Chrome: ${pinned%%.*} pinned, ${stable%%.*} is stable"
+          if gh issue list --state open --search "Cronet is behind Chrome in:title" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "An issue is already open." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          aar="https://github.com/PimpinPumpkin/Vela/releases/download/cronet-runtime/cronet-${stable}.aar"
+          if curl -fsIL -o /dev/null "$aar"; then have="The AAR for ${stable} is already published."; else have="The AAR for ${stable} is not published yet: run Vela's cronet-build workflow first."; fi
+          gh issue create --title "$title" --body "Chrome for Android stable is ${stable} and has been out ${age_days} days. The app ships Cronet ${pinned} and claims that version in its user agent.
+
+          ${have}
+
+          To move: set \`corkboard.cronetVersion=${stable}\` in gradle.properties on canary, install the canary build, and check that search and a listing load."
