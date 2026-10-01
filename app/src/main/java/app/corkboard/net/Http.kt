@@ -96,6 +96,37 @@ class Http(context: Context) {
         request.start()
     }
 
+    /**
+     * Where [url] redirects to, without going there. craigslist's front door sends each visitor to
+     * the site nearest their network address; the destination is the answer, the page is not needed.
+     */
+    suspend fun redirectTarget(url: String): String? = suspendCancellableCoroutine { cont ->
+        val callback = object : UrlRequest.Callback() {
+            override fun onRedirectReceived(request: UrlRequest, info: UrlResponseInfo, newLocationUrl: String) {
+                request.cancel()
+                if (cont.isActive) cont.resume(newLocationUrl)
+            }
+            override fun onResponseStarted(request: UrlRequest, info: UrlResponseInfo) {
+                request.cancel()
+                if (cont.isActive) cont.resume(null)
+            }
+            override fun onReadCompleted(request: UrlRequest, info: UrlResponseInfo, buf: ByteBuffer) {}
+            override fun onSucceeded(request: UrlRequest, info: UrlResponseInfo) { if (cont.isActive) cont.resume(null) }
+            override fun onFailed(request: UrlRequest, info: UrlResponseInfo?, error: CronetException) { if (cont.isActive) cont.resume(null) }
+            override fun onCanceled(request: UrlRequest, info: UrlResponseInfo?) { if (cont.isActive) cont.resume(null) }
+        }
+        val request = try {
+            engine.newUrlRequestBuilder(url, callback, executor).apply {
+                BrowserHeaders.headers(BrowserHeaders.Kind.Page, BuildConfig.CRONET_VERSION, acceptLanguage()).forEach { (k, v) -> addHeader(k, v) }
+            }.build()
+        } catch (t: Throwable) {
+            cont.resume(null)
+            return@suspendCancellableCoroutine
+        }
+        cont.invokeOnCancellation { request.cancel() }
+        request.start()
+    }
+
     private companion object {
         const val TAG = "CorkboardHttp"
     }

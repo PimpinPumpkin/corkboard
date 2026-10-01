@@ -59,10 +59,11 @@ private fun ListScaffold(title: String, onBack: () -> Unit, empty: String?, cont
 @Composable
 fun FavoritesScreen(store: Store, onBack: () -> Unit, onOpen: (Listing) -> Unit) {
     val favorites by store.favorites.collectAsStateWithLifecycle()
+    val notes by store.notes.collectAsStateWithLifecycle()
     ListScaffold("Favorites", onBack, if (favorites.isEmpty()) "Tap the heart on a listing to keep it here." else null) { pad ->
         LazyColumn(contentPadding = pad) {
             items(favorites, key = { it.postingId }) { l ->
-                ListingRow(l, favorite = true, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) })
+                ListingRow(l, favorite = true, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, note = notes[l.postingId])
             }
         }
     }

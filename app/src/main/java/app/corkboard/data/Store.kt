@@ -45,9 +45,15 @@ class Store(context: Context) {
     private val _area = MutableStateFlow(read("area.json", Area.serializer()))
     val area: StateFlow<Area?> = _area.asStateFlow()
 
-    fun setArea(area: Area) {
+    private val _near = MutableStateFlow(read("near.json", Near.serializer()))
+    val near: StateFlow<Near?> = _near.asStateFlow()
+
+    /** Picks the site to search and, optionally, a postal code and distance to narrow every search to. */
+    fun setArea(area: Area, near: Near? = null) {
         write("area.json", Area.serializer(), area)
+        if (near != null) write("near.json", Near.serializer(), near) else File(dir, "near.json").delete()
         _area.value = area
+        _near.value = near
     }
 
     fun cachedAreas(): List<Area> = read("areas.json", ListSerializer(Area.serializer())).orEmpty()
@@ -79,6 +85,46 @@ class Store(context: Context) {
         ClUrls.setLocale(phone.country, _language.value ?: phone.language)
     }
 
+    // ---- pinned categories ----
+
+    private val _pinned = MutableStateFlow(prefs.getString("pinned", null)?.split(',')?.filter { it.isNotEmpty() } ?: Catalog.featured.map { it.abbr })
+
+    /** The categories shown as large tiles on the home screen, in the order they were pinned. */
+    val pinned: StateFlow<List<String>> = _pinned.asStateFlow()
+
+    fun togglePinned(abbr: String) {
+        val next = if (abbr in _pinned.value) _pinned.value - abbr else _pinned.value + abbr
+        prefs.edit().putString("pinned", next.joinToString(",")).apply()
+        _pinned.value = next
+    }
+
+    // ---- other countries ----
+
+    /** On by default: someone who picked a site in one country is rarely shopping in the next one over. */
+    private val _homeCountryOnly = MutableStateFlow(prefs.getBoolean("homeCountryOnly", true))
+    val homeCountryOnly: StateFlow<Boolean> = _homeCountryOnly.asStateFlow()
+
+    fun setHomeCountryOnly(on: Boolean) {
+        prefs.edit().putBoolean("homeCountryOnly", on).apply()
+        _homeCountryOnly.value = on
+    }
+
+    private var countries: Map<Int, String> = emptyMap()
+
+    /**
+     * A test for "is this listing in the same country as the site being searched", or null when
+     * the gate is off or the country cannot be told. A search by distance near a border returns
+     * mostly the other side, in the other side's currency and odometer units.
+     */
+    fun countryGate(query: SearchQuery): ((Listing) -> Boolean)? {
+        if (!_homeCountryOnly.value) return null
+        if (countries.isEmpty()) countries = cachedAreas().associate { it.id to it.country }
+        val home = cachedAreas().firstOrNull { it.hostname == query.areaHost }?.country?.takeIf { it.isNotEmpty() } ?: return null
+        val known = countries
+        // A listing whose site is unknown is kept: better one stray than a missing result.
+        return { l -> known[l.areaId].let { it == null || it == home } }
+    }
+
     private val _grid = MutableStateFlow(prefs.getBoolean("grid", true))
     val grid: StateFlow<Boolean> = _grid.asStateFlow()
 
@@ -97,6 +143,25 @@ class Store(context: Context) {
         val next = if (now.any { it.postingId == listing.postingId }) now.filter { it.postingId != listing.postingId } else listOf(listing) + now
         write("favorites.json", ListSerializer(Listing.serializer()), next)
         _favorites.value = next
+    }
+
+    // ---- notes ----
+
+    private val noteSerializer = kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.serializer<Long>(), kotlinx.serialization.serializer<String>())
+    private val _notes = MutableStateFlow(read("notes.json", noteSerializer).orEmpty())
+
+    /** The user's own words about a listing, by posting id. Kept on the phone like everything else. */
+    val notes: StateFlow<Map<Long, String>> = _notes.asStateFlow()
+
+    fun setNote(postingId: Long, text: String) {
+        val next = if (text.isBlank()) _notes.value - postingId else _notes.value + (postingId to text.trim())
+        write("notes.json", noteSerializer, next)
+        _notes.value = next
+    }
+
+    fun unhideAll() {
+        write("hidden.json", ListSerializer(kotlinx.serialization.serializer<Long>()), emptyList())
+        _hidden.value = emptySet()
     }
 
     private val _hidden = MutableStateFlow(read("hidden.json", ListSerializer(kotlinx.serialization.serializer<Long>())).orEmpty().toSet())

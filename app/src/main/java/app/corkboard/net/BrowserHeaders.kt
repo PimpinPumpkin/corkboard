@@ -58,7 +58,7 @@ object BrowserHeaders {
     }
 
     /** What kind of request this is, which decides `Accept` and the `Sec-Fetch-*` trio. */
-    enum class Kind { Api, Image }
+    enum class Kind { Api, Image, Page }
 
     /**
      * Headers in the order Chrome writes them for a request made by the search page. The user
@@ -78,6 +78,15 @@ object BrowserHeaders {
                     add("Sec-Fetch-Mode" to "cors")
                     add("Sec-Fetch-Dest" to "empty")
                 }
+                Kind.Page -> {
+                    // A page typed into the address bar: no referrer, and nothing but the navigation trio.
+                    add("Upgrade-Insecure-Requests" to "1")
+                    add("Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+                    add("Sec-Fetch-Site" to "none")
+                    add("Sec-Fetch-Mode" to "navigate")
+                    add("Sec-Fetch-User" to "?1")
+                    add("Sec-Fetch-Dest" to "document")
+                }
                 Kind.Image -> {
                     add("Accept" to "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
                     add("Sec-Fetch-Site" to "same-site")
@@ -85,7 +94,7 @@ object BrowserHeaders {
                     add("Sec-Fetch-Dest" to "image")
                 }
             }
-            add("Referer" to "$ORIGIN/")
+            if (kind != Kind.Page) add("Referer" to "$ORIGIN/")
             add("Accept-Language" to acceptLanguage)
         }
     }

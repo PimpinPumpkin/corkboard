@@ -13,7 +13,10 @@ data class Area(
     val lat: Double = 0.0,
     val lon: Double = 0.0,
     val subAreas: List<SubArea> = emptyList(),
-)
+) {
+    /** Miles in the three countries whose sites measure in them, kilometers everywhere else. */
+    val distanceUnit: String get() = if (country in setOf("US", "GB", "PR")) "mi" else "km"
+}
 
 @Serializable
 data class SubArea(val abbr: String, val name: String)
@@ -74,6 +77,10 @@ data class Listing(
     val odometer: Long? = null,
     val bedrooms: Int? = null,
     val sqft: Int? = null,
+    /** The craigslist site the listing is on; searches by distance reach into neighboring ones. */
+    val areaId: Int = 0,
+    /** "mi" or "km" as that site measures, which near a border is not always the searcher's. */
+    val distanceUnit: String? = null,
 ) {
     val hasDetails: Boolean get() = title != null && uuid != null
 }
@@ -93,6 +100,13 @@ sealed interface Filter {
 
 /** Where the site says a search was run: the answer to a postal code, or just the area. */
 data class Place(val city: String, val postal: String, val radius: Int, val country: String)
+
+/** A spot resolved by the site: which craigslist site covers it, the town, and its postal code. */
+data class Located(val areaId: Int, val city: String, val postal: String)
+
+/** "Within [distance] of [postal]": the narrower place every search from the home screen starts with. */
+@Serializable
+data class Near(val postal: String, val distance: String, val city: String = "")
 
 /** The measures an area uses, as the site reports them: "mi" or "km", "ft" or "m". */
 data class Units(val distance: String = "mi", val area: String = "ft")

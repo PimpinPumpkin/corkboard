@@ -38,8 +38,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
@@ -50,7 +50,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -91,6 +91,7 @@ import app.corkboard.data.Listing
 import app.corkboard.data.Posting
 import app.corkboard.data.Store
 import app.corkboard.ui.Format
+import app.corkboard.ui.components.MiniMap
 import kotlinx.coroutines.CancellationException
 
 private fun openInBrowser(context: Context, url: String) {
@@ -157,17 +158,6 @@ fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit
         bottomBar = {
             Surface(tonalElevation = 2.dp) {
                 Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val lat = p?.lat ?: listing.lat
-                    val lon = p?.lon ?: listing.lon
-                    if (lat != null && lon != null) OutlinedButton(onClick = {
-                        // A maps app if the phone has one; otherwise OpenStreetMap in the browser.
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lon?q=$lat,$lon"))) }
-                            .onFailure { openInBrowser(context, "https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=14/$lat/$lon") }
-                    }) {
-                        Icon(Icons.Outlined.Map, null, Modifier.size(18.dp))
-                        Spacer(Modifier.size(8.dp))
-                        Text("Map")
-                    }
                     // Replying means solving the site's own check and seeing the seller's contact
                     // details, which belongs in a real browser.
                     Button(onClick = { webUrl?.let { openInBrowser(context, it) } }, enabled = webUrl != null, modifier = Modifier.weight(1f)) {
@@ -184,11 +174,30 @@ fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit
             Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 if (price != null) Text(price, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                 SelectionContainer { Text(title, style = MaterialTheme.typography.titleLarge) }
+                val postedAt = p?.postedAt ?: listing.postedAt
+                // A listing edited or renewed after it went up says so, right beside when it was posted.
+                val updated = p?.updatedAt?.takeIf { it > postedAt + 600 }
                 Text(
-                    listOf(p?.place?.takeIf { it.isNotBlank() } ?: listing.place, Format.ago(p?.postedAt ?: listing.postedAt)).filter { it.isNotBlank() }.joinToString(" · "),
+                    listOfNotNull(
+                        (p?.place?.takeIf { it.isNotBlank() } ?: listing.place).takeIf { it.isNotBlank() },
+                        "posted ${Format.ago(postedAt)}".takeIf { postedAt > 0 },
+                        updated?.let { "updated ${Format.ago(it)}" },
+                    ).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
+                )
+                // The user's own note about this listing. Saved as it is typed; never leaves the phone.
+                val notes by store.notes.collectAsStateWithLifecycle()
+                var note by remember(listing.postingId) { mutableStateOf(notes[listing.postingId].orEmpty()) }
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it.take(2000); store.setNote(listing.postingId, note) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    label = { Text("Your note") },
+                    placeholder = { Text("Asked about the timing belt, offered 4,200...") },
+                    leadingIcon = { Icon(Icons.Outlined.EditNote, null) },
+                    maxLines = 6,
                 )
                 when {
                     p != null -> {
@@ -203,6 +212,17 @@ fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit
                                 }
                             }
                         }
+                        // Above the description: some run to pages, and where the thing is matters sooner.
+                        val lat = p.lat ?: listing.lat
+                        val lon = p.lon ?: listing.lon
+                        if (lat != null && lon != null && (lat != 0.0 || lon != 0.0)) {
+                            Spacer(Modifier.height(20.dp))
+                            MiniMap(lat, lon, onClick = {
+                                // A maps app if the phone has one; otherwise OpenStreetMap in the browser.
+                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lon?q=$lat,$lon"))) }
+                                    .onFailure { openInBrowser(context, "https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=14/$lat/$lon") }
+                            })
+                        }
                         Spacer(Modifier.height(20.dp))
                         val link = MaterialTheme.colorScheme.primary
                         val body = remember(p.bodyHtml, link) {
@@ -211,7 +231,11 @@ fun PostingScreen(listing: Listing, api: ClApi, store: Store, onBack: () -> Unit
                         SelectionContainer { Text(body, style = MaterialTheme.typography.bodyLarge) }
                         p.notices.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp)) }
                         Text(
-                            "Posting ID ${p.postingId}" + if (p.updatedAt > p.postedAt + 60) " · updated ${Format.ago(p.updatedAt)}" else "",
+                            listOfNotNull(
+                                "Posted ${Format.date(p.postedAt)}",
+                                updated?.let { "Updated ${Format.date(it)}" },
+                                "Posting ID ${p.postingId}",
+                            ).joinToString("\n"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 20.dp),

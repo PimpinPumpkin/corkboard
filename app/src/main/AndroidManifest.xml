@@ -4,6 +4,8 @@
     <!-- Talks to craigslist, directly from this phone, and to nothing else. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- "Use my location" when choosing where to look. Approximate only, and only when tapped. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Saved-search alerts. Asked for only when a search is first saved. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

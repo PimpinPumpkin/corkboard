@@ -81,6 +81,13 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
                 )
             }
 
+            Heading("Hidden listings")
+            val hidden by store.hidden.collectAsStateWithLifecycle()
+            Item(
+                if (hidden.isEmpty()) "Nothing hidden" else if (hidden.size == 1) "Show 1 hidden listing again" else "Show ${hidden.size} hidden listings again",
+                "Press and hold a listing in search results to hide it everywhere.",
+            ) { store.unhideAll() }
+
             Heading("Privacy")
             Item(
                 if (cleared) "Site cookie cleared" else "Clear the site cookie",

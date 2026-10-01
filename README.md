@@ -11,13 +11,19 @@ craigslist.
   square feet, pets, laundry and parking. The site describes each category's filters in its search
   responses and the app draws them from that, so nothing is hand-built per category.
 - **Grid or list**, with photos, price, mileage or bedrooms, place and age at a glance.
+- **Start from where you are.** The first launch opens on the site craigslist itself would pick for
+  you. Change it with one tap on "Use my location", a postal code and a distance, or the full list.
 - **Search near a postal code**, within a distance you choose, or pick a sub-area. Sort by distance.
+- **Hide other countries.** A distance search near a border otherwise returns the other side of it,
+  in its currency and odometer units. On by default.
 - **Any craigslist site in the world.** Filters, labels and prices come back in your language
   (the fifteen the site is translated into), with kilometers and local currency where they apply.
   The app's own buttons and menus are in English for now.
 - **Full listings**: photo gallery with pinch or double tap to zoom, attributes, description, map
   (your maps app, or OpenStreetMap in the browser if there is none).
-- **Favorites and hidden listings**, kept on the phone.
+- **A map on the listing itself**, with no maps app needed, and when it was posted and last updated.
+- **Favorites, notes and hidden listings**, kept on the phone. Press and hold a result to hide it.
+- **Pin the categories you use** to the top of the home screen.
 - **Saved searches with alerts.** The phone checks every few hours and tells you what is new.
   No push service, no account.
 - **Light, dark and wallpaper colors.**

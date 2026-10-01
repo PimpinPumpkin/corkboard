@@ -54,6 +54,18 @@ object Parsers {
             )
         }
 
+    /** The answer to "which site covers these coordinates": its id, the town, and the postal code there. */
+    fun located(body: String): Located? {
+        val o = data(body)["items"].arr()?.firstOrNull().obj() ?: return null
+        return Located(o["areaId"].int() ?: return null, o["city"].name().orEmpty(), o["postal"].name().orEmpty())
+    }
+
+    /** The place a search says it ran for, which is how a postal code is turned into a site. */
+    fun searchedPlace(body: String): Located? {
+        val o = data(body)["location"].obj() ?: return null
+        return Located(o["areaId"].int() ?: return null, o["city"].name().orEmpty(), o["postal"].name().orEmpty())
+    }
+
     fun suggestions(body: String): List<String> = data(body)["items"].arr().orEmpty().mapNotNull { it.str() }
 
     // ---- search ----
@@ -72,7 +84,7 @@ object Parsers {
             place = loc?.let { Place(it["city"].str().orEmpty(), it["postal"].str().orEmpty(), it["radius"].int() ?: 0, it["country"].str().orEmpty()) },
             units = Units(area?.get("distanceUnits").str() ?: "mi", area?.get("areaUnits").str() ?: "ft"),
             total = d["totalResultCount"].int() ?: 0,
-            items = if (decode == null) emptyList() else items(d["items"].arr().orEmpty(), decode),
+            items = if (decode == null) emptyList() else items(d["items"].arr().orEmpty(), decode, d["areas"].obj()),
             filters = filters.flatMap { filter(it.obj()) },
             sortOptions = options(sortFilter),
             sort = d["detailsOrder"].str() ?: sortFilter?.get("value").str() ?: "date",
@@ -121,7 +133,7 @@ object Parsers {
      * which. Ids and dates are offsets from minimums in the `decode` table, and the location is
      * indexes into its tables: `area:description[:neighborhood]~lat~lon`.
      */
-    private fun items(rows: List<JsonElement>, decode: JsonObject): List<Listing> {
+    private fun items(rows: List<JsonElement>, decode: JsonObject, areas: JsonObject?): List<Listing> {
         val minPostingId = decode["minPostingId"].long() ?: 0L
         val minPostedDate = decode["minPostedDate"].long() ?: 0L
         val locations = decode["locations"].arr().orEmpty()
@@ -146,6 +158,8 @@ object Parsers {
                 // The neighborhood is the site's own name for the place; the description is whatever
                 // the poster typed there, which for dealers is often a phone number.
                 place = hood ?: description.orEmpty(),
+                areaId = loc?.getOrNull(0).int() ?: 0,
+                distanceUnit = areas?.get(loc?.getOrNull(0).str().orEmpty()).obj()?.get("distanceUnits").str(),
                 hostname = loc?.getOrNull(1).str().orEmpty(),
                 subarea = loc?.getOrNull(2).str().orEmpty(),
                 lat = geo.getOrNull(1)?.toDoubleOrNull(),

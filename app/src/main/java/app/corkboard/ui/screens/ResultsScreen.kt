@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,7 +57,9 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -99,7 +102,10 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
     val grid by store.grid.collectAsStateWithLifecycle()
     val favoriteIds = remember(favorites) { favorites.map { it.postingId }.toHashSet() }
     val isSaved = saved.any { it.query == query }
-    val items = remember(state.items, hidden) { state.items.filter { it.postingId !in hidden } }
+    val homeOnly by store.homeCountryOnly.collectAsStateWithLifecycle()
+    val gate = remember(query.areaHost, homeOnly) { store.countryGate(query) }
+    val items = remember(state.items, hidden, gate) { state.items.filter { it.postingId !in hidden && (gate == null || gate(it)) } }
+    val foreignHidden = gate != null && state.items.any { !gate(it) }
 
     var text by rememberSaveable(query.text) { mutableStateOf(query.text) }
     var showFilters by remember { mutableStateOf(false) }
@@ -112,12 +118,26 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
     // Asked the first time a search is saved, which is the first moment a notification makes sense.
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
+    val notes by store.notes.collectAsStateWithLifecycle()
+    /** Long press hides a listing from every search, with a moment to take it back. */
+    fun hide(l: Listing) {
+        store.setHidden(l.postingId, true)
+        scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            if (snackbar.showSnackbar("Listing hidden", actionLabel = "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) store.setHidden(l.postingId, false)
+        }
+    }
+
     val gridState = rememberLazyGridState()
     // Ask for the next stretch a couple of screens before the end, so scrolling never hits a wall.
     val nearEnd by remember(items.size) {
         derivedStateOf { (gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= items.size - 24 }
     }
-    LaunchedEffect(nearEnd, items.size, state.hasMore) { if (nearEnd && items.isNotEmpty() && state.hasMore) state.loadMore() }
+    // Counted on what the search returned, not on what is shown: near a border most of a batch can be
+    // filtered away, and the next one has to be fetched for the list to fill at all.
+    LaunchedEffect(nearEnd, items.size, state.items.size, state.hasMore, state.loadingMore) {
+        if (nearEnd && state.items.isNotEmpty() && state.hasMore && !state.loadingMore) state.loadMore()
+    }
     // A new search starts at the top.
     LaunchedEffect(query) { gridState.scrollToItem(0) }
 
@@ -135,6 +155,8 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
                                     page == null || state.loading -> query.areaName
                                     // A postal code the site does not know is ignored without an error; say so.
                                     query.postal != null && page.place?.postal.isNullOrEmpty() -> "${Format.count(page.total)} in ${query.areaName} · postal code not found"
+                                    // The site's count includes the other side of the border; do not repeat it as ours.
+                                    foreignHidden -> "Near ${page.place?.city?.takeIf { query.postal != null } ?: query.areaName} · other countries hidden"
                                     query.postal != null -> "${Format.count(page.total)} near ${page.place?.city}"
                                     else -> "${Format.count(page.total)} in ${query.areaName}"
                                 },
@@ -225,7 +247,8 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
         when {
             state.error != null -> Message(pad, state.error.orEmpty()) { Button(onClick = state::retry) { Text("Try again") } }
             state.loading && items.isEmpty() -> Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            items.isEmpty() -> Message(pad, "Nothing found. Try fewer filters or a wider area.") {}
+            items.isEmpty() && state.hasMore -> Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            items.isEmpty() -> Message(pad, if (foreignHidden) "Nothing found in this country. Listings from other countries are hidden." else "Nothing found. Try fewer filters or a wider area.") {}
             else -> LazyVerticalGrid(
                 columns = if (grid) GridCells.Adaptive(160.dp) else GridCells.Fixed(1),
                 state = gridState,
@@ -238,8 +261,8 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
             ) {
                 itemsIndexed(items, key = { _, l -> l.postingId }) { _, l ->
                     val fav = l.postingId in favoriteIds
-                    if (grid) ListingTile(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units)
-                    else ListingRow(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units)
+                    if (grid) ListingTile(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { hide(l) })
+                    else ListingRow(l, fav, onClick = { onOpen(l) }, onFavorite = { store.toggleFavorite(l) }, units = units, note = notes[l.postingId], onLongClick = { hide(l) })
                 }
                 if (state.hasMore) item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
@@ -253,7 +276,7 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
     }
 
     if (showPlace && page != null) {
-        PlaceDialog(query, page.subareas, page.units.distance, onApply = { showPlace = false; state.run(it) }, onDismiss = { showPlace = false })
+        PlaceDialog(query, page.subareas, page.units.distance, homeOnly, store::setHomeCountryOnly, onApply = { showPlace = false; state.run(it) }, onDismiss = { showPlace = false })
     }
 }
 
@@ -262,7 +285,7 @@ fun ResultsScreen(state: ResultsState, api: ClApi, store: Store, onBack: () -> U
  * three exclude each other, the same as on the site.
  */
 @Composable
-private fun PlaceDialog(query: SearchQuery, subareas: List<Option>, distanceUnit: String, onApply: (SearchQuery) -> Unit, onDismiss: () -> Unit) {
+private fun PlaceDialog(query: SearchQuery, subareas: List<Option>, distanceUnit: String, homeOnly: Boolean, onHomeOnly: (Boolean) -> Unit, onApply: (SearchQuery) -> Unit, onDismiss: () -> Unit) {
     var postal by remember { mutableStateOf(query.postal.orEmpty()) }
     var distance by remember { mutableStateOf(query.distance ?: "10") }
     AlertDialog(
@@ -291,6 +314,14 @@ private fun PlaceDialog(query: SearchQuery, subareas: List<Option>, distanceUnit
                     )
                 }
                 Button(onClick = { onApply(query.near(postal, distance)) }, enabled = postal.isNotBlank(), modifier = Modifier.padding(top = 12.dp)) { Text("Search near here") }
+
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp).clickable { onHomeOnly(!homeOnly) }, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Hide other countries", style = MaterialTheme.typography.bodyLarge)
+                        Text("A distance search near a border reaches across it.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = homeOnly, onCheckedChange = onHomeOnly)
+                }
 
                 Text("Or pick a part of ${query.areaName}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 20.dp))
                 (listOf(Option("Whole area", "")) + subareas).forEach { o ->

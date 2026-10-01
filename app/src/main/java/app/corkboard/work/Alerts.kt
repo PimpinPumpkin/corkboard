@@ -85,7 +85,8 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             // Spread the searches out instead of firing them in one burst.
             if (i > 0) delay(Random.nextLong(8_000, 25_000))
             val page = runCatching { app.api.search(saved.query, ClUrls.sortId(saved.query.sort)) }.getOrNull() ?: continue
-            val fresh = page.items.count { it.postingId > saved.newestSeen }
+            val gate = app.store.countryGate(saved.query)
+            val fresh = page.items.count { it.postingId > saved.newestSeen && (gate == null || gate(it)) }
             if (fresh == 0 || fresh == saved.unseen) continue
             app.store.updateSaved(saved.id) { it.copy(unseen = fresh) }
             val what = saved.query.text.ifEmpty { saved.query.categoryName }

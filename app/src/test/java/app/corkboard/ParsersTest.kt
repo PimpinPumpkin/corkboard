@@ -155,6 +155,8 @@ class ParsersTest {
         assertNull(page.items[1].price)
         assertEquals("km", page.units.distance)
         assertEquals("m", page.units.area)
+        assertEquals(91, page.items[0].areaId)
+        assertEquals("km", page.items[0].distanceUnit)
         val posting = Parsers.posting("""{"data":{"items":[{"postingId":1,"postingUuid":"abc","title":"t","body":"b","location":{"neighborhood":0,"description":"","subArea":0,"area":"mexico city"}}]},"errors":[]}""")
         assertEquals("", posting.place)
     }

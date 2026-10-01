@@ -22,12 +22,19 @@ object Format {
         }
     }
 
+    /** "Sep 28, 3:14 PM", or with the year when it is not this one. [at] is epoch seconds. */
+    fun date(at: Long): String {
+        val d = Date(at * 1000)
+        val sameYear = SimpleDateFormat("yyyy", Locale.US).let { it.format(d) == it.format(Date()) }
+        return SimpleDateFormat(if (sameYear) "MMM d, h:mm a" else "MMM d yyyy, h:mm a", Locale.US).format(d)
+    }
+
     /** The site formats prices itself, in the area's currency; the bare number is only a fallback. */
     fun price(l: Listing): String? = l.priceText ?: l.price?.let { NumberFormat.getIntegerInstance().format(it) }
 
     /** The small facts under a title: "92,000 mi", "2 br", "850 sq ft", in the area's own measures. */
     fun facts(l: Listing, units: Units = Units()): String = listOfNotNull(
-        l.odometer?.let { NumberFormat.getIntegerInstance().format(it) + " " + units.distance },
+        l.odometer?.let { NumberFormat.getIntegerInstance().format(it) + " " + (l.distanceUnit ?: units.distance) },
         l.bedrooms?.let { "$it br" },
         l.sqft?.let { "$it " + if (units.area == "m") "m²" else "sq ft" },
     ).joinToString(" · ")

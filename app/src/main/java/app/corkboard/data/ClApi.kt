@@ -56,6 +56,16 @@ object ClUrls {
 
     fun posting(uuid: String): String = API.format("rapi") + "postings/${enc(uuid)}?$LOCALE"
 
+    fun locate(lat: Double, lon: Double): String = API.format("rapi") + "locations?$LOCALE&lat=$lat&lon=$lon"
+
+    /** The front door: it answers with a redirect to the site nearest the visitor's network address. */
+    const val FRONT_DOOR = "https://geo.craigslist.org/"
+
+    /** "sfbay" out of https://www.craigslist.org/area/sfbay or https://sfbay.craigslist.org/. */
+    fun hostOf(siteUrl: String): String? =
+        Regex("""craigslist\.org/area/([a-z0-9]+)""").find(siteUrl)?.groupValues?.get(1)
+            ?: Regex("""//([a-z0-9]+)\.craigslist\.org""").find(siteUrl)?.groupValues?.get(1)?.takeIf { it != "www" && it != "geo" }
+
     fun suggest(type: String, text: String): String = API.format("sapi") + "suggest/${enc(type)}?$LOCALE&query=${enc(text)}"
 
     /** The listing's page on the site, for the browser: replying and flagging happen there. */
@@ -81,6 +91,22 @@ class ClApi(private val http: Http) {
 
     suspend fun batch(page: SearchPage, sortId: Int, start: Int): Map<Long, ListingDetails> =
         Parsers.batch(get(ClUrls.batch(page, sortId, start)), page.minPostingId)
+
+    /** The site and postal code for a point. Coordinates are rounded first: a town, not a doorstep. */
+    suspend fun locate(lat: Double, lon: Double): Located? =
+        Parsers.located(get(ClUrls.locate(Math.round(lat * 100) / 100.0, Math.round(lon * 100) / 100.0)))
+
+    /**
+     * Which site a postal code belongs to. The only thing that resolves one is a search, so this
+     * runs the lightest search there is and reads where the site says it looked.
+     */
+    suspend fun locatePostal(postal: String, anyHost: String): Located? {
+        val probe = SearchQuery(areaHost = anyHost, areaName = "", category = "zip", categoryName = "").near(postal, "10")
+        return Parsers.searchedPlace(get(ClUrls.search(probe, 0)))?.takeIf { it.postal.isNotEmpty() }
+    }
+
+    /** The hostname of the site craigslist itself would send this visitor to, or null. */
+    suspend fun nearestHost(): String? = http.redirectTarget(ClUrls.FRONT_DOOR)?.let(ClUrls::hostOf)
 
     suspend fun posting(uuid: String): Posting = Parsers.posting(get(ClUrls.posting(uuid)))
     suspend fun suggest(type: String, text: String): List<String> = Parsers.suggestions(get(ClUrls.suggest(type, text)))

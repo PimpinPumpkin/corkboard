@@ -99,6 +99,45 @@ class RequestShapeTest {
         }
     }
 
+    @Test
+    fun `the front door's redirect names the nearest site`() {
+        assertEquals("seattle", ClUrls.hostOf("https://www.craigslist.org/area/seattle"))
+        assertEquals("sfbay", ClUrls.hostOf("https://sfbay.craigslist.org/"))
+        assertNull(ClUrls.hostOf("https://www.craigslist.org/about/sites"))
+        assertNull(ClUrls.hostOf("https://example.com/area/seattle"))
+    }
+
+    @Test
+    fun `a point is looked up by rounded coordinates, and read back as a site and postal code`() {
+        assertEquals("https://rapi.craigslist.org/web/v8/locations?cc=US&lang=en&lat=48.75&lon=-122.48", ClUrls.locate(48.75, -122.48))
+        val found = Parsers.located("""{"data":{"items":[{"areaId":217,"city":"Oakland","country":"US","lat":48.76,"lon":-122.487,"postal":"94103","radius":15,"region":"WA","subareaId":0,"url":"sfbay.craigslist.org"}],"lang":"en"},"errors":[]}""")!!
+        assertEquals(217, found.areaId)
+        assertEquals("Oakland", found.city)
+        assertEquals("94103", found.postal)
+        assertNull(Parsers.located("""{"data":{"items":[]},"errors":[]}"""))
+        // A search answers with the place it ran for; a postal code the site ignored comes back empty.
+        val searched = Parsers.searchedPlace(javaClass.classLoader!!.getResource("search_cta.json")!!.readText())!!
+        assertEquals(1, searched.areaId)
+        assertEquals("", searched.postal)
+    }
+
+    @Test
+    fun `a page request carries no referrer`() {
+        val h = BrowserHeaders.headers(BrowserHeaders.Kind.Page, "155.0.8059.16", "en-US,en;q=0.9").toMap()
+        assertEquals("navigate", h["Sec-Fetch-Mode"])
+        assertEquals("none", h["Sec-Fetch-Site"])
+        assertNull(h["Referer"])
+        assertNull(h["Origin"])
+    }
+
+    @Test
+    fun `map tiles come from the site's own tile servers`() {
+        // Portland, Oregon at zoom 13 is tile 1304, 2930; one zoom in doubles both.
+        assertEquals(1304, app.corkboard.ui.components.Tiles.x(-122.67, 13).toInt())
+        assertEquals(2930, app.corkboard.ui.components.Tiles.y(45.52, 13).toInt())
+        assertEquals("https://map4.craigslist.org/t09/13/1304/2930.png", app.corkboard.ui.components.Tiles.url(1304, 2930, 13))
+    }
+
     // ---- headers ----
 
     @Test
