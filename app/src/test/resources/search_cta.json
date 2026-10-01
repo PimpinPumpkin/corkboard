@@ -1,0 +1,1262 @@
+{
+"apiVersion": 8,
+"configId": "9dacaa504915c9a6574ed9eb409e48525984529afbf4e20dff1a811ee707d9f0",
+"configTs": 1790812805,
+"data": {
+"areas": {
+"1": {
+"areaUnits": "ft",
+"currency": "USD",
+"distanceUnits": "mi",
+"name": "sfbay"
+}
+},
+"bundleDups": 0,
+"cacheTs": 1790840857,
+"canonicalUrl": "//www.craigslist.org/search/area/sfbay?auto_transmission=1&cat=cta&min_auto_year=2015",
+"categoryAbbr": "cta",
+"decode": {
+"locationDescriptions": [
+0,
+"place 1",
+"place 2",
+"place 3",
+"place 4",
+"place 5",
+"place 6",
+"place 7",
+"place 8",
+"place 9",
+"place 10",
+"place 11",
+"place 12",
+"place 13",
+"place 14",
+"place 15",
+"place 16",
+"place 17",
+"place 18",
+"place 19",
+"place 20",
+"place 21",
+"place 22",
+"place 23",
+"place 24",
+"place 25",
+"place 26",
+"place 27",
+"place 28",
+"place 29",
+"place 30",
+"place 31",
+"place 32",
+"place 33",
+"place 34",
+"place 35",
+"place 36",
+"place 37",
+"place 38",
+"place 39",
+"place 40"
+],
+"locations": [
+0,
+[
+1,
+"sfbay",
+"eby"
+],
+[
+1,
+"sfbay",
+"sby"
+],
+[
+1,
+"sfbay",
+"nby"
+],
+[
+1,
+"sfbay",
+"sfc"
+],
+[
+1,
+"sfbay",
+"scz"
+],
+[
+1,
+"sfbay",
+"pen"
+]
+],
+"maxPostedDate": 1790813736,
+"minDate": 1822376857,
+"minPostedDate": 1788275238,
+"minPostingId": 7958795223,
+"neighborhoods": [
+0,
+"hood 1",
+"hood 2",
+"hood 3",
+"hood 4",
+"hood 5",
+"hood 6",
+"hood 7",
+"hood 8",
+"hood 9",
+"hood 10",
+"hood 11",
+"hood 12",
+"hood 13",
+"hood 14",
+"hood 15",
+"hood 16",
+"hood 17",
+"hood 18",
+"hood 19",
+"hood 20",
+"hood 21",
+"hood 22",
+"hood 23",
+"hood 24",
+"hood 25",
+"hood 26",
+"hood 27",
+"hood 28",
+"hood 29",
+"hood 30",
+"hood 31",
+"hood 32",
+"hood 33",
+"hood 34",
+"hood 35",
+"hood 36"
+],
+"version": 2
+},
+"detailsOrder": "date",
+"filterButtons": [
+{
+"buttonLabel": "price",
+"formConfig": {
+"input_prefix": "$",
+"is_default_button": 1,
+"label": "price",
+"maxVal": {
+"name": "max_price",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_price",
+"placeholder": "min"
+},
+"name": "price",
+"type": "range",
+"variant": "customPriceWidget"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "sold by",
+"formConfig": {
+"is_default_button": 1,
+"label": "sold by",
+"name": "purveyor",
+"options": [
+{
+"label": "all",
+"value": "all"
+},
+{
+"label": "owner",
+"value": "owner"
+},
+{
+"label": "dealer",
+"value": "dealer"
+}
+],
+"type": "select",
+"variant": "radio"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "type",
+"formConfig": {
+"is_default_button": 1,
+"label": "type",
+"name": "auto_bodytype",
+"options": [
+{
+"label": "bus",
+"value": 1
+},
+{
+"label": "convertible",
+"value": 2
+},
+{
+"label": "coupe",
+"value": 3
+},
+{
+"label": "hatchback",
+"value": 4
+},
+{
+"label": "minivan",
+"value": 5
+},
+{
+"label": "offroad",
+"value": 6
+},
+{
+"label": "pickup",
+"value": 7
+},
+{
+"label": "sedan",
+"value": 8
+},
+{
+"label": "truck",
+"value": 9
+},
+{
+"label": "SUV",
+"value": 10
+},
+{
+"label": "wagon",
+"value": 11
+},
+{
+"label": "van",
+"value": 12
+},
+{
+"label": "other",
+"value": 13
+}
+],
+"type": "multi"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "2015+ model year",
+"formConfig": {
+"is_default_button": 1,
+"label": "model year",
+"maxVal": {
+"name": "max_auto_year",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_auto_year",
+"placeholder": "min"
+},
+"name": "auto_year",
+"type": "range"
+},
+"isSet": 1
+},
+{
+"buttonLabel": "fuel",
+"formConfig": {
+"is_default_button": 1,
+"label": "fuel",
+"name": "auto_fuel_type",
+"options": [
+{
+"label": "gas",
+"value": 1
+},
+{
+"label": "diesel",
+"value": 2
+},
+{
+"label": "hybrid",
+"value": 3
+},
+{
+"label": "electric",
+"value": 4
+},
+{
+"label": "other",
+"value": 6
+}
+],
+"type": "multi"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "condition",
+"formConfig": {
+"is_default_button": 1,
+"label": "condition",
+"name": "condition",
+"options": [
+{
+"label": "new",
+"value": "10"
+},
+{
+"label": "like new",
+"value": "20"
+},
+{
+"label": "excellent",
+"value": "30"
+},
+{
+"label": "good",
+"value": "40"
+},
+{
+"label": "fair",
+"value": "50"
+},
+{
+"label": "salvage",
+"value": "60"
+}
+],
+"type": "multi"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "manual",
+"formConfig": {
+"label": "transmission",
+"name": "auto_transmission",
+"options": [
+{
+"label": "manual",
+"value": 1
+},
+{
+"label": "automatic",
+"value": 2
+},
+{
+"label": "other",
+"value": 3
+}
+],
+"type": "multi"
+},
+"isSet": 1
+}
+],
+"filters": [
+{
+"autocomplete": "search",
+"label": "query",
+"name": "query",
+"type": "text"
+},
+{
+"name": "vicinity",
+"type": "hidden"
+},
+{
+"label": "sort by",
+"name": "sort",
+"options": [
+{
+"label": "newest",
+"value": "date"
+},
+{
+"label": "oldest",
+"value": "dateoldest"
+},
+{
+"label": "﹩→ $$$",
+"value": "priceasc"
+},
+{
+"label": "$$$ → ﹩",
+"value": "pricedsc"
+},
+{
+"label": "distance",
+"value": "dist"
+}
+],
+"type": "select",
+"value": "date"
+},
+{
+"input_prefix": "$",
+"label": "price",
+"maxVal": {
+"name": "max_price",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_price",
+"placeholder": "min"
+},
+"name": "price",
+"type": "range",
+"variant": "customPriceWidget"
+},
+{
+"input_prefix": "$",
+"label": "monthly payment",
+"maxVal": {
+"name": "max_monthly_payment",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_monthly_payment",
+"placeholder": "min"
+},
+"name": "monthly_payment",
+"type": "range"
+},
+{
+"label": "sold by",
+"name": "purveyor",
+"options": [
+{
+"label": "all",
+"value": "all"
+},
+{
+"label": "owner",
+"value": "owner"
+},
+{
+"label": "dealer",
+"value": "dealer"
+}
+],
+"type": "select"
+},
+{
+"autocomplete": "makemodel",
+"label": "make and model",
+"name": "auto_make_model",
+"type": "text",
+"variant": "text"
+},
+{
+"label": "model year",
+"maxVal": {
+"name": "max_auto_year",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_auto_year",
+"placeholder": "min"
+},
+"name": "auto_year",
+"type": "range",
+"variant": "yearRange"
+},
+{
+"label": "odometer",
+"maxVal": {
+"name": "max_auto_miles",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_auto_miles",
+"placeholder": "min"
+},
+"name": "auto_miles",
+"type": "range"
+},
+{
+"label": "drive",
+"name": "auto_drivetrain",
+"options": [
+{
+"label": "fwd",
+"value": 1
+},
+{
+"label": "rwd",
+"value": 2
+},
+{
+"label": "4wd",
+"value": 3
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "transmission",
+"name": "auto_transmission",
+"options": [
+{
+"label": "manual",
+"value": 1
+},
+{
+"label": "automatic",
+"value": 2
+},
+{
+"label": "other",
+"value": 3
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "cylinders",
+"name": "auto_cylinders",
+"options": [
+{
+"label": "3 cylinders",
+"value": 1
+},
+{
+"label": "4 cylinders",
+"value": 2
+},
+{
+"label": "5 cylinders",
+"value": 3
+},
+{
+"label": "6 cylinders",
+"value": 4
+},
+{
+"label": "8 cylinders",
+"value": 5
+},
+{
+"label": "10 cylinders",
+"value": 6
+},
+{
+"label": "12 cylinders",
+"value": 7
+},
+{
+"label": "other",
+"value": 8
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "condition",
+"name": "condition",
+"options": [
+{
+"label": "new",
+"value": 10
+},
+{
+"label": "like new",
+"value": 20
+},
+{
+"label": "excellent",
+"value": 30
+},
+{
+"label": "good",
+"value": 40
+},
+{
+"label": "fair",
+"value": 50
+},
+{
+"label": "salvage",
+"value": 60
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "fuel",
+"name": "auto_fuel_type",
+"options": [
+{
+"label": "gas",
+"value": 1
+},
+{
+"label": "diesel",
+"value": 2
+},
+{
+"label": "hybrid",
+"value": 3
+},
+{
+"label": "electric",
+"value": 4
+},
+{
+"label": "other",
+"value": 6
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "type",
+"name": "auto_bodytype",
+"options": [
+{
+"label": "bus",
+"value": 1
+},
+{
+"label": "convertible",
+"value": 2
+},
+{
+"label": "coupe",
+"value": 3
+},
+{
+"label": "hatchback",
+"value": 4
+},
+{
+"label": "minivan",
+"value": 5
+},
+{
+"label": "offroad",
+"value": 6
+},
+{
+"label": "pickup",
+"value": 7
+},
+{
+"label": "sedan",
+"value": 8
+},
+{
+"label": "truck",
+"value": 9
+},
+{
+"label": "SUV",
+"value": 10
+},
+{
+"label": "wagon",
+"value": 11
+},
+{
+"label": "van",
+"value": 12
+},
+{
+"label": "other",
+"value": 13
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "paint color",
+"name": "auto_paint",
+"options": [
+{
+"label": "black",
+"value": 1
+},
+{
+"label": "blue",
+"value": 2
+},
+{
+"label": "brown",
+"value": 20
+},
+{
+"label": "green",
+"value": 3
+},
+{
+"label": "grey",
+"value": 4
+},
+{
+"label": "orange",
+"value": 5
+},
+{
+"label": "purple",
+"value": 6
+},
+{
+"label": "red",
+"value": 7
+},
+{
+"label": "silver",
+"value": 8
+},
+{
+"label": "white",
+"value": 9
+},
+{
+"label": "yellow",
+"value": 10
+},
+{
+"label": "custom",
+"value": 11
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "title status",
+"name": "auto_title_status",
+"options": [
+{
+"label": "clean",
+"value": 1
+},
+{
+"label": "salvage",
+"value": 2
+},
+{
+"label": "rebuilt",
+"value": 3
+},
+{
+"label": "parts only",
+"value": 4
+},
+{
+"label": "lien",
+"value": 5
+},
+{
+"label": "missing",
+"value": 6
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "use craigslist sub-area",
+"name": "subarea",
+"options": [
+{
+"label": "san francisco",
+"location": {
+"city": "san francisco",
+"lat": 37.774419,
+"lon": -122.413431,
+"radius": 50
+},
+"value": "sfc"
+},
+{
+"label": "south bay",
+"location": {
+"city": "south bay",
+"lat": 37.331272,
+"lon": -121.925176,
+"radius": 50
+},
+"value": "sby"
+},
+{
+"label": "east bay",
+"location": {
+"city": "east bay",
+"lat": 37.816622,
+"lon": -122.097694,
+"radius": 50
+},
+"value": "eby"
+},
+{
+"label": "peninsula",
+"location": {
+"city": "peninsula",
+"lat": 37.51342,
+"lon": -122.237935,
+"radius": 50
+},
+"value": "pen"
+},
+{
+"label": "north bay",
+"location": {
+"city": "north bay",
+"lat": 38.213112,
+"lon": -122.55265,
+"radius": 50
+},
+"value": "nby"
+},
+{
+"label": "santa cruz",
+"location": {
+"city": "santa cruz",
+"lat": 36.981202,
+"lon": -121.961466,
+"radius": 50
+},
+"value": "scz"
+}
+],
+"type": "select",
+"value": ""
+},
+{
+"form": [
+{
+"label": "search titles only",
+"name": "srchType",
+"type": "boolean",
+"value": "T"
+},
+{
+"label": "has image",
+"name": "hasPic",
+"type": "boolean",
+"value": 1
+},
+{
+"label": "posted today",
+"name": "postedToday",
+"type": "boolean",
+"value": 1
+},
+{
+"label": "hide duplicates",
+"name": "bundleDuplicates",
+"type": "boolean",
+"value": 1
+}
+],
+"name": "basic bools",
+"type": "group"
+},
+{
+"form": [
+{
+"label": "cryptocurrency ok",
+"name": "crypto_currency_ok",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "delivery available",
+"name": "delivery_available",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+}
+],
+"name": "crypto_currency_ok",
+"type": "group"
+},
+{
+"label": "language of posting",
+"name": "language",
+"options": [
+{
+"label": "afrikaans",
+"value": 1
+},
+{
+"label": "català",
+"value": 2
+},
+{
+"label": "dansk",
+"value": 3
+},
+{
+"label": "deutsch",
+"value": 4
+},
+{
+"label": "english",
+"value": 5
+},
+{
+"label": "español",
+"value": 6
+},
+{
+"label": "suomi",
+"value": 7
+},
+{
+"label": "français",
+"value": 8
+},
+{
+"label": "italiano",
+"value": 9
+},
+{
+"label": "nederlands",
+"value": 10
+},
+{
+"label": "norsk",
+"value": 11
+},
+{
+"label": "português",
+"value": 12
+},
+{
+"label": "svenska",
+"value": 13
+},
+{
+"label": "filipino",
+"value": 14
+},
+{
+"label": "türkçe",
+"value": 15
+},
+{
+"label": "中文",
+"value": 16
+},
+{
+"label": "العربية",
+"value": 17
+},
+{
+"label": "日本語",
+"value": 18
+},
+{
+"label": "한국말",
+"value": 19
+},
+{
+"label": "русский",
+"value": 20
+},
+{
+"label": "tiếng việt",
+"value": 21
+}
+],
+"type": "multi",
+"variant": "standard"
+}
+],
+"humanReadableParams": [
+{
+"key": "auto_transmission",
+"name": "transmission",
+"value": "manual"
+},
+{
+"key": "min_auto_year",
+"name": "min model year",
+"value": "2015"
+},
+{
+"key": "sort",
+"name": "sort",
+"value": "newest"
+}
+],
+"items": [
+[
+17015235,
+2538498,
+145,
+29000,
+"1:1:1~37.5308~-121.9712",
+"0ny0hJ",
+[
+13,
+"fUrzJ5PhEyjBs9xUVCp7Ru"
+],
+[
+4,
+"3:00w0w_TqEQX1TUvp_0ny0hJ",
+"3:00L0L_h9MIL0W3Z1n_0ny0hJ",
+"3:00u0u_bjjyzndQJIl_0ny0hJ",
+"3:00h0h_dG4PVtiFH0o_0Cz0t2",
+"3:00505_1rCHG5QvDAj_0Cz0t2",
+"3:00K0K_4pAaxWzP2Ne_0Cz0t2",
+"3:01212_aAOGtU5QITP_0lR0t2",
+"3:00e0e_kWLshWWQRr5_0Cz0t2",
+"3:00909_9OLqGSOV2sU_0Cz0t2",
+"3:00u0u_lbj19QKonWR_0dl0hJ",
+"3:00Z0Z_gps6VI2vdnf_0Cz0t2",
+"3:00404_aQiGrPkP6GC_0Cz0t2",
+"3:00d0d_gnjXhrLKh0F_0Cz0t2"
+],
+[
+6,
+"sample-listing-0"
+],
+[
+9,
+22000
+],
+[
+10,
+"$29,000"
+],
+"Sample listing 0"
+],
+[
+16954983,
+2531259,
+145,
+16490,
+"2:2:2~37.3295~-122.0694",
+"0CI0t2",
+[
+13,
+"vVq19H4QFx1FhkMzufFxBp"
+],
+[
+4,
+"3:00u0u_jCnjpqEat3M_0CI0t2",
+"3:00c0c_c7X5Fau8aLA_0CI0t2",
+"3:00b0b_9iiuINMOasF_0CI0t2",
+"3:00Y0Y_ewFXmtzUS6L_0CI0t2",
+"3:00g0g_llhqNVjsIfg_0CI0t2",
+"3:00s0s_f1wf16dFeko_0t20CI",
+"3:00l0l_kccmdOV4emc_0CI0t2",
+"3:00D0D_cFiiOTZLYVn_0CI0t2",
+"3:00E0E_f3Kh0wz5dDn_0t20CI",
+"3:00r0r_lE9ncnBCj4q_0t20CI",
+"3:00P0P_US0xSF5wuH_0t20CI",
+"3:00U0U_jGLtTgFj4t2_0t20CI",
+"3:00k0k_Hx00W6CXk8_0t20CI",
+"3:00h0h_ekpOxMGScjj_0t20CI",
+"3:00303_jSu9kMsczsE_0t20CI",
+"3:01111_k7SmDQetFwX_0CI0t2",
+"3:00h0h_fDgZbswI31l_0js0p6",
+"3:00J0J_1beh3iA5MVJ_0js0pl",
+"3:00O0O_2ShVQ9unmNB_0js0pb",
+"3:00p0p_aTqGqDEr5xu_0js0pb"
+],
+[
+6,
+"sample-listing-1"
+],
+[
+9,
+76261
+],
+[
+10,
+"$16,490"
+],
+"Sample listing 1"
+],
+[
+16914654,
+2527306,
+145,
+14500,
+"2:3:3~37.3108~-121.9623",
+"0CI0t2",
+[
+13,
+"4ENA8sor2CeaX918M2ST4M"
+],
+[
+4,
+"3:00I0I_6jpH3s5tyaZ_0CI0t2",
+"3:00H0H_haXAXB3gFy5_0CI0t2",
+"3:00I0I_2tDmASBSqRu_0CI0t2",
+"3:01515_cZd3T3BUeju_0CI0t2",
+"3:00S0S_l39fS3VicgS_0CI0t2",
+"3:00r0r_dpnJl1R4NVS_0CI0t2",
+"3:01313_faRWL5A2Hxz_0CI0t2",
+"3:01111_lIUgoJW7pwl_0CI0t2",
+"3:00l0l_7iDmGQIheH_0CI0t2",
+"3:00A0A_41mHwBxlfug_0CI0t2",
+"3:00u0u_egyW7OFj3Yk_0CI0t2",
+"3:00c0c_94nzRnB88Eh_0CI0t2",
+"3:00Y0Y_biv03Y0nkoh_0CI0t2",
+"3:00X0X_4zOO5h6lH3n_0CI0t2",
+"3:00g0g_38T2lzSv9IP_0CI0t2",
+"3:00P0P_8OPPIIOX0ZW_0CI0t2",
+"3:00j0j_1mG5lLVIHfK_0CI0t2",
+"3:00z0z_8dWiTb0EGl5_0CI0t2"
+],
+[
+6,
+"sample-listing-2"
+],
+[
+9,
+92000
+],
+[
+10,
+"$14,500"
+],
+"Sample listing 2"
+],
+[
+16844352,
+2520755,
+145,
+4200,
+"1:4:4~37.8787~-122.1728",
+"0CI0t2",
+[
+13,
+"jbDWWkj24FeVTt4QtYbQUV"
+],
+[
+4,
+"3:00H0H_86id3g7fwfw_0CI0t2"
+],
+[
+6,
+"sample-listing-3"
+],
+[
+9,
+171908
+],
+[
+10,
+"$4,200"
+],
+"Sample listing 3"
+],
+[
+16813698,
+2518383,
+146,
+35888,
+"3:5~37.9691~-122.5105",
+"0jm0ew",
+[
+13,
+"wP1cRvFH5bwCBGUYvdQxKP"
+],
+[
+4,
+"3:00I0I_i7Jf4OJ90ZS_0jm0ew",
+"3:00l0l_d17OT8pX8Lf_0pO0hc"
+],
+[
+6,
+"sample-listing-4"
+],
+[
+9,
+2839
+],
+[
+10,
+"$35,888"
+],
+"Sample listing 4"
+],
+[
+16780143,
+2515547,
+146,
+18999,
+"3:5~37.9691~-122.5105",
+"0gw0co",
+[
+13,
+"xjPDTXiByY5rhu6Ru9xNWk"
+],
+[
+4,
+"3:00w0w_3E1Pd9JCTpU_0gw0co",
+"3:00000_6r1LtNVxpND_0jm0ew",
+"3:00g0g_brrWOMIDB0E_0gw0co",
+"3:01212_dm4E78jdLd_0gw0co",
+"3:00y0y_cLNVfEhPvpT_0gw0co",
+"3:00303_bU2JzEk83iq_0gw0co",
+"3:00Z0Z_4LQh7LBoerW_0gw0co",
+"3:00j0j_k2BawHwoP7k_0gw0co",
+"3:00J0J_7SOvbnzxblU_0gw0co",
+"3:00m0m_iyyr2y9HJad_0gw0co",
+"3:00M0M_bajlUUTu8G8_0gw0co",
+"3:00T0T_fOdDmv92naX_0gw0co",
+"3:00t0t_5P5ZhoJmFKe_0gw0co",
+"3:00W0W_gJYgL2QpKWF_0gw0co",
+"3:00000_3kPU7QA3h20_0gw0co",
+"3:00j0j_cNMgo9OAiwF_0pO0hd"
+],
+[
+6,
+"sample-listing-5"
+],
+[
+9,
+60287
+],
+[
+10,
+"$18,999"
+],
+"Sample listing 5"
+]
+],
+"lang": "en_US",
+"location": {
+"areaId": 1,
+"city": "SF bay area",
+"country": "US",
+"lat": 37.5,
+"lon": -122.25,
+"postal": "",
+"radius": 60,
+"region": "CA",
+"url": "sfbay.craigslist.org"
+},
+"pageTitle": "sample",
+"params": {
+"auto_transmission": "1",
+"min_auto_year": "2015",
+"query": ""
+},
+"resultsOrder": "date",
+"totalResultCount": 301,
+"updated": 1790840857,
+"vicinity": null
+},
+"errors": []
+}

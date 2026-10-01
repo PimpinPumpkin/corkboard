@@ -1,0 +1,892 @@
+{
+"apiVersion": 8,
+"configId": "9dacaa504915c9a6574ed9eb409e48525984529afbf4e20dff1a811ee707d9f0",
+"configTs": 1790812805,
+"data": {
+"areas": {
+"1": {
+"areaUnits": "ft",
+"currency": "USD",
+"distanceUnits": "mi",
+"name": "sfbay"
+}
+},
+"bundleDups": 1,
+"cacheTs": 1790840896,
+"canonicalUrl": "//www.craigslist.org/search/area/sfbay?cat=apa",
+"categoryAbbr": "apa",
+"decode": {
+"locationDescriptions": [
+0,
+"place 1",
+"place 2",
+"place 3",
+"place 4",
+"place 5",
+"place 6",
+"place 7",
+"place 8",
+"place 9",
+"place 10",
+"place 11",
+"place 12",
+"place 13",
+"place 14",
+"place 15",
+"place 16",
+"place 17",
+"place 18",
+"place 19",
+"place 20",
+"place 21",
+"place 22",
+"place 23",
+"place 24",
+"place 25",
+"place 26",
+"place 27",
+"place 28",
+"place 29",
+"place 30",
+"place 31",
+"place 32",
+"place 33",
+"place 34",
+"place 35",
+"place 36",
+"place 37",
+"place 38",
+"place 39",
+"place 40"
+],
+"locations": [
+0,
+[
+1,
+"sfbay",
+"scz"
+],
+[
+1,
+"sfbay",
+"sfc"
+],
+[
+1,
+"sfbay",
+"eby"
+],
+[
+1,
+"sfbay",
+"nby"
+],
+[
+1,
+"sfbay",
+"sby"
+],
+[
+1,
+"sfbay",
+"pen"
+]
+],
+"maxPostedDate": 1790840690,
+"minDate": 1789171200,
+"minPostedDate": 1790821827,
+"minPostingId": 7958907525,
+"neighborhoods": [
+0,
+"hood 1",
+"hood 2",
+"hood 3",
+"hood 4",
+"hood 5",
+"hood 6",
+"hood 7",
+"hood 8",
+"hood 9",
+"hood 10",
+"hood 11",
+"hood 12",
+"hood 13",
+"hood 14",
+"hood 15",
+"hood 16",
+"hood 17",
+"hood 18",
+"hood 19",
+"hood 20",
+"hood 21",
+"hood 22",
+"hood 23",
+"hood 24",
+"hood 25",
+"hood 26",
+"hood 27",
+"hood 28",
+"hood 29",
+"hood 30",
+"hood 31",
+"hood 32",
+"hood 33",
+"hood 34",
+"hood 35",
+"hood 36",
+"hood 37",
+"hood 38",
+"hood 39",
+"hood 40"
+],
+"version": 2
+},
+"detailsOrder": "date",
+"filterButtons": [
+{
+"buttonLabel": "price",
+"formConfig": {
+"input_prefix": "$",
+"is_default_button": 1,
+"label": "price",
+"maxVal": {
+"name": "max_price",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_price",
+"placeholder": "min"
+},
+"name": "price",
+"type": "range",
+"variant": "barchartwidget"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "beds",
+"formConfig": {
+"is_default_button": 1,
+"label": "bedrooms",
+"maxVal": {
+"name": "max_bedrooms",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_bedrooms",
+"placeholder": "min"
+},
+"type": "range"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "baths",
+"formConfig": {
+"is_default_button": 1,
+"label": "bathrooms",
+"maxVal": {
+"name": "max_bathrooms",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_bathrooms",
+"placeholder": "min"
+},
+"type": "range"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "type",
+"formConfig": {
+"is_default_button": 1,
+"label": "housing type",
+"name": "housing_type",
+"options": [
+{
+"label": "apartment",
+"value": 1
+},
+{
+"label": "condo",
+"value": 2
+},
+{
+"label": "cottage/cabin",
+"value": 3
+},
+{
+"label": "duplex",
+"value": 4
+},
+{
+"label": "flat",
+"value": 5
+},
+{
+"label": "house",
+"value": 6
+},
+{
+"label": "in-law",
+"value": 7
+},
+{
+"label": "loft",
+"value": 8
+},
+{
+"label": "townhouse",
+"value": 9
+},
+{
+"label": "manufactured",
+"value": 10
+},
+{
+"label": "assisted living",
+"value": 11
+},
+{
+"label": "land",
+"value": 12
+}
+],
+"type": "multi"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "cats ok",
+"formConfig": {
+"is_default_button": 1,
+"label": "cats ok",
+"name": "pets_cat",
+"type": "boolean",
+"value": 1
+},
+"isSet": ""
+},
+{
+"buttonLabel": "dogs ok",
+"formConfig": {
+"is_default_button": 1,
+"label": "dogs ok",
+"name": "pets_dog",
+"type": "boolean",
+"value": 1
+},
+"isSet": ""
+},
+{
+"buttonLabel": "furnished",
+"formConfig": {
+"is_default_button": 1,
+"label": "furnished",
+"name": "is_furnished",
+"type": "boolean",
+"value": 1
+},
+"isSet": ""
+}
+],
+"filters": [
+{
+"autocomplete": "search",
+"label": "query",
+"name": "query",
+"type": "text"
+},
+{
+"name": "vicinity",
+"type": "hidden"
+},
+{
+"label": "sort by",
+"name": "sort",
+"options": [
+{
+"label": "upcoming",
+"value": "upcoming"
+},
+{
+"label": "newest",
+"value": "date"
+},
+{
+"label": "oldest",
+"value": "dateoldest"
+},
+{
+"label": "﹩→ $$$",
+"value": "priceasc"
+},
+{
+"label": "$$$ → ﹩",
+"value": "pricedsc"
+},
+{
+"label": "distance",
+"value": "dist"
+}
+],
+"type": "select",
+"value": "date"
+},
+{
+"input_prefix": "$",
+"label": "price",
+"maxVal": {
+"name": "max_price",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_price",
+"placeholder": "min"
+},
+"name": "price",
+"type": "range",
+"variant": "barchartwidget"
+},
+{
+"label": "bedrooms",
+"maxVal": {
+"name": "max_bedrooms",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_bedrooms",
+"placeholder": "min"
+},
+"type": "range"
+},
+{
+"label": "bathrooms",
+"maxVal": {
+"name": "max_bathrooms",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_bathrooms",
+"placeholder": "min"
+},
+"type": "range"
+},
+{
+"label": "sq ft",
+"maxVal": {
+"name": "maxSqft",
+"placeholder": "max"
+},
+"minVal": {
+"name": "minSqft",
+"placeholder": "min"
+},
+"type": "range"
+},
+{
+"form": [
+{
+"label": "cats ok",
+"name": "pets_cat",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "dogs ok",
+"name": "pets_dog",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "furnished",
+"name": "is_furnished",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "no smoking",
+"name": "no_smoking",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "wheelchair accessible",
+"name": "wheelchaccess",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "air conditioning",
+"name": "airconditioning",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "EV charging",
+"name": "ev_charging",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "no broker fee",
+"name": "broker_fee",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "no application fee",
+"name": "application_fee",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+}
+],
+"name": "pets_cat",
+"type": "group"
+},
+{
+"label": "rent period",
+"name": "rent_period",
+"options": [
+{
+"label": "daily",
+"value": 1
+},
+{
+"label": "weekly",
+"value": 2
+},
+{
+"label": "monthly",
+"value": 3
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "availability",
+"name": "availabilityMode",
+"options": [
+{
+"label": "all dates",
+"value": ""
+},
+{
+"label": "within 30 days",
+"value": "1"
+},
+{
+"label": "beyond 30 days",
+"value": "2"
+}
+],
+"type": "select"
+},
+{
+"label": "housing type",
+"name": "housing_type",
+"options": [
+{
+"label": "apartment",
+"value": 1
+},
+{
+"label": "condo",
+"value": 2
+},
+{
+"label": "cottage/cabin",
+"value": 3
+},
+{
+"label": "duplex",
+"value": 4
+},
+{
+"label": "flat",
+"value": 5
+},
+{
+"label": "house",
+"value": 6
+},
+{
+"label": "in-law",
+"value": 7
+},
+{
+"label": "loft",
+"value": 8
+},
+{
+"label": "townhouse",
+"value": 9
+},
+{
+"label": "manufactured",
+"value": 10
+},
+{
+"label": "assisted living",
+"value": 11
+},
+{
+"label": "land",
+"value": 12
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "laundry",
+"name": "laundry",
+"options": [
+{
+"label": "w/d in unit",
+"value": 1
+},
+{
+"label": "w/d hookups",
+"value": 4
+},
+{
+"label": "laundry in bldg",
+"value": 2
+},
+{
+"label": "laundry on site",
+"value": 3
+},
+{
+"label": "no laundry on site",
+"value": 5
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "parking",
+"name": "parking",
+"options": [
+{
+"label": "carport",
+"value": 1
+},
+{
+"label": "attached garage",
+"value": 2
+},
+{
+"label": "detached garage",
+"value": 3
+},
+{
+"label": "off-street parking",
+"value": 4
+},
+{
+"label": "street parking",
+"value": 5
+},
+{
+"label": "valet parking",
+"value": 6
+},
+{
+"label": "no parking",
+"value": 7
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "use craigslist sub-area",
+"name": "subarea",
+"options": [
+{
+"label": "san francisco",
+"location": {
+"city": "san francisco",
+"lat": 37.774419,
+"lon": -122.413431,
+"radius": 50
+},
+"value": "sfc"
+},
+{
+"label": "south bay",
+"location": {
+"city": "south bay",
+"lat": 37.331272,
+"lon": -121.925176,
+"radius": 50
+},
+"value": "sby"
+},
+{
+"label": "east bay",
+"location": {
+"city": "east bay",
+"lat": 37.816622,
+"lon": -122.097694,
+"radius": 50
+},
+"value": "eby"
+},
+{
+"label": "peninsula",
+"location": {
+"city": "peninsula",
+"lat": 37.51342,
+"lon": -122.237935,
+"radius": 50
+},
+"value": "pen"
+},
+{
+"label": "north bay",
+"location": {
+"city": "north bay",
+"lat": 38.213112,
+"lon": -122.55265,
+"radius": 50
+},
+"value": "nby"
+},
+{
+"label": "santa cruz",
+"location": {
+"city": "santa cruz",
+"lat": 36.981202,
+"lon": -121.961466,
+"radius": 50
+},
+"value": "scz"
+}
+],
+"type": "select",
+"value": ""
+},
+{
+"form": [
+{
+"label": "search titles only",
+"name": "srchType",
+"type": "boolean",
+"value": "T"
+},
+{
+"label": "has image",
+"name": "hasPic",
+"type": "boolean",
+"value": 1
+},
+{
+"label": "posted today",
+"name": "postedToday",
+"type": "boolean",
+"value": 1
+},
+{
+"label": "show duplicates",
+"name": "showDuplicates",
+"type": "boolean",
+"value": 1
+}
+],
+"name": "basic bools",
+"type": "group"
+}
+],
+"humanReadableParams": [
+{
+"key": "sort",
+"name": "sort",
+"value": "newest"
+}
+],
+"items": [
+[
+17020149,
+18863,
+1,
+970,
+"1:1~36.9717~-121.9034",
+"04L03x",
+[
+2,
+19.0,
+20.0,
+21.0
+],
+[
+13,
+"vZ3SR2YKEJpWXhnRYyBCyY"
+],
+[
+4,
+"3:00u0u_2uoBzCuyFtt_04L03x",
+"3:00E0E_cqOtq6e5vz0_04K03A",
+"3:00202_ixKig4u6L2A_07k05u",
+"3:00G0G_dbVFF0QyfjL_04M03z",
+"3:01313_gBQrUypiLFS_07v05y",
+"3:00303_7x62qhT5Pbk_07r05E"
+],
+[
+6,
+"sample-listing-0"
+],
+[
+10,
+"$970"
+],
+"Sample listing 0",
+[
+5,
+1,
+0
+]
+],
+[
+17016243,
+18749,
+1,
+1020,
+"2:2~37.7157~-122.4476",
+"0lv0ds",
+[
+13,
+"pU6tNAjTRHxsneCnsWoFFQ"
+],
+[
+4,
+"3:00404_dy2lA2Cl4du_0lv0ds",
+"3:00e0e_6WfwMtaSZvB_0lr0dz",
+"3:00a0a_eVRdWKWoacM_0lp0dH",
+"3:00D0D_4g2ih9P7j8V_0ls0dy"
+],
+[
+6,
+"sample-listing-1"
+],
+[
+10,
+"$1,020"
+],
+"Sample listing 1",
+[
+5,
+2,
+1050
+]
+],
+[
+9906333,
+18638,
+1,
+2010,
+"3:3:1~37.6925~-121.884",
+"0fg0aC",
+[
+13,
+"sBrQgyciQbmez978cGwmtG"
+],
+[
+4,
+"3:00j0j_bT4IpMn0POf_0fg0aC",
+"3:00D0D_8fghKGYOkCd_0cU08B",
+"3:00s0s_4XD2xPEqff5_0z30KJ",
+"3:00I0I_eudtv48S52A_0k00dl",
+"3:00r0r_5NmCEN9kU2O_09I06w",
+"3:01111_50IJZibZHZl_0Du0QE",
+"3:01414_gaDnlopZ34k_0fQ0aI",
+"3:00s0s_cnH20MIt5xY_09d06q",
+"3:00O0O_83EBFbEUEac_0bi0aT"
+],
+[
+6,
+"sample-listing-2"
+],
+[
+10,
+"$2,010"
+],
+"Sample listing 2",
+[
+5,
+1,
+583
+]
+],
+[
+17014230,
+18626,
+1,
+3999,
+"4:4:2~38.4549~-122.2564",
+"06304x",
+[
+13,
+"sJB7RqAZYB38vZSH6aZ8jm"
+],
+[
+4,
+"3:00W0W_5SkBFbFMn4X_06304x",
+"3:00H0H_3GCpRH5JB7M_07d05p",
+"3:00m0m_cT1oMgXA5r4_087065",
+"3:00o0o_fgdAm4HB5en_085063",
+"3:00B0B_hcIDNvS7iBc_0a307x"
+],
+[
+6,
+"sample-listing-3"
+],
+[
+10,
+"$3,999"
+],
+"Sample listing 3",
+[
+5,
+1,
+796
+]
+]
+],
+"lang": "en_US",
+"location": {
+"areaId": 1,
+"city": "SF bay area",
+"country": "US",
+"lat": 37.5,
+"lon": -122.25,
+"postal": "",
+"radius": 60,
+"region": "CA",
+"url": "sfbay.craigslist.org"
+},
+"pageTitle": "sample",
+"params": {
+"query": ""
+},
+"resultsOrder": "date",
+"totalResultCount": 21009,
+"updated": 1790840896,
+"vicinity": null
+},
+"errors": []
+}

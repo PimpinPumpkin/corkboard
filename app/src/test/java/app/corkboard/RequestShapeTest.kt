@@ -1,0 +1,139 @@
+package app.corkboard
+
+import app.corkboard.data.ClUrls
+import app.corkboard.data.Parsers
+import app.corkboard.data.SearchQuery
+import app.corkboard.net.BrowserHeaders
+import app.corkboard.net.CookieStore
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class RequestShapeTest {
+    private val cars = SearchQuery(areaHost = "sfbay", areaName = "SF bay area", category = "cta", categoryName = "Cars & trucks")
+
+    @Test
+    fun `a plain category search`() {
+        assertEquals(
+            "https://sapi.craigslist.org/web/v8/postings/search/full?batch=0-0-360-0-0&cc=US&lang=en&searchPath=area%2Fsfbay&cat=cta",
+            ClUrls.search(cars, sortId = 0),
+        )
+    }
+
+    @Test
+    fun `filters are sent sorted, multi-selects repeated`() {
+        val q = cars.with("min_auto_year", listOf("2015")).with("auto_transmission", listOf("1", "2")).with("query", listOf("miata rf"))
+        assertEquals(
+            "https://sapi.craigslist.org/web/v8/postings/search/full?batch=0-0-360-0-0&cc=US&lang=en&searchPath=area%2Fsfbay" +
+                "&auto_transmission=1&auto_transmission=2&cat=cta&min_auto_year=2015&query=miata%20rf",
+            ClUrls.search(q, sortId = 0),
+        )
+    }
+
+    @Test
+    fun `a sub-area replaces the area in the path`() {
+        assertTrue(ClUrls.search(cars.copy(subarea = "eby"), 0).contains("searchPath=subarea%2Feby&"))
+    }
+
+    @Test
+    fun `sorting travels in the batch key too`() {
+        val q = cars.with("sort", listOf("priceasc"))
+        assertEquals(4, ClUrls.sortId(q.sort))
+        assertTrue(ClUrls.search(q, ClUrls.sortId(q.sort)).contains("batch=0-0-360-4-0"))
+        assertEquals(0, ClUrls.sortId(null))
+    }
+
+    @Test
+    fun `clearing a filter removes its parameter`() {
+        val q = cars.with("min_price", listOf("500")).with("min_price", listOf(""))
+        assertTrue(q.params.isEmpty())
+        assertEquals(0, q.filterCount)
+        assertEquals(1, cars.with("min_price", listOf("500")).with("query", listOf("x")).with("sort", listOf("date")).filterCount)
+    }
+
+    @Test
+    fun `the details batch is addressed by position and cache`() {
+        val full = Parsers.search(javaClass.classLoader!!.getResource("search_full.json")!!.readText())
+        val url = ClUrls.batch(full, sortId = 1, start = 1080)
+        assertTrue(url.startsWith("https://sapi.craigslist.org/web/v8/postings/search/batch?batch=0-1080-1080-1-0-${full.maxPostedTs}-${full.cacheTs}&cacheId="))
+        assertTrue(url.endsWith("&cc=US&lang=en"))
+    }
+
+    @Test
+    fun `listing urls`() {
+        assertEquals("https://rapi.craigslist.org/web/v8/postings/abc123?cc=US&lang=en", ClUrls.posting("abc123"))
+        assertEquals("https://www.craigslist.org/view/d/some-slug/abc123", ClUrls.web("abc123", "some-slug"))
+        assertEquals("https://www.craigslist.org/view/abc123", ClUrls.web("abc123", null))
+        assertEquals("https://sapi.craigslist.org/web/v8/suggest/makemodel?cc=US&lang=en&query=mazda%20mi", ClUrls.suggest("makemodel", "mazda mi"))
+    }
+
+    // ---- headers ----
+
+    @Test
+    fun `client hints match real Chrome releases`() {
+        assertEquals("\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"", BrowserHeaders.secChUa(120))
+        assertEquals("\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"", BrowserHeaders.secChUa(124))
+    }
+
+    @Test
+    fun `user agent is Chrome on Android at the Cronet version`() {
+        assertEquals(
+            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+            BrowserHeaders.userAgent("155.0.8059.16"),
+        )
+    }
+
+    @Test
+    fun `api requests look like the search page's own`() {
+        val h = BrowserHeaders.headers(BrowserHeaders.Kind.Api, "155.0.8059.16", "en-US,en;q=0.9").toMap()
+        assertEquals("\"Android\"", h["sec-ch-ua-platform"])
+        assertEquals("?1", h["sec-ch-ua-mobile"])
+        assertEquals("https://www.craigslist.org", h["Origin"])
+        assertEquals("https://www.craigslist.org/", h["Referer"])
+        assertEquals("same-site", h["Sec-Fetch-Site"])
+        assertEquals("cors", h["Sec-Fetch-Mode"])
+        assertEquals("empty", h["Sec-Fetch-Dest"])
+        val image = BrowserHeaders.headers(BrowserHeaders.Kind.Image, "155.0.8059.16", "en-US,en;q=0.9").toMap()
+        assertEquals("image", image["Sec-Fetch-Dest"])
+        assertNull(image["Origin"])
+    }
+
+    @Test
+    fun `accept-language is built the way Chrome builds it`() {
+        assertEquals("en-US,en;q=0.9", BrowserHeaders.acceptLanguage(listOf("en-US")))
+        assertEquals("en-US,en;q=0.9,es-MX;q=0.8,es;q=0.7", BrowserHeaders.acceptLanguage(listOf("en-US", "es-MX")))
+        assertEquals("en-US,en;q=0.9", BrowserHeaders.acceptLanguage(emptyList()))
+    }
+
+    // ---- cookies ----
+
+    @Test
+    fun `the site cookie is kept and sent back to every subdomain`() {
+        val jar = CookieStore(null)
+        jar.save("sapi.craigslist.org", "cl_b=4|abc|123;path=/;domain=.craigslist.org;secure;expires=Fri, 01-Jan-2038 00:00:00 GMT")
+        assertEquals("cl_b=4|abc|123", jar.header("rapi.craigslist.org"))
+        assertEquals("cl_b=4|abc|123", jar.header("sapi.craigslist.org"))
+        assertNull(jar.header("example.com"))
+        assertNull(jar.header("notcraigslist.org"))
+    }
+
+    @Test
+    fun `a cookie cannot be set for someone else's domain`() {
+        val jar = CookieStore(null)
+        jar.save("sapi.craigslist.org", "x=1; Domain=example.com")
+        assertNull(jar.header("example.com"))
+        assertEquals("x=1", jar.header("sapi.craigslist.org"))
+    }
+
+    @Test
+    fun `expired and emptied cookies go away`() {
+        val jar = CookieStore(null)
+        jar.save("sapi.craigslist.org", "a=1; Max-Age=10", now = 1_000)
+        assertEquals("a=1", jar.header("sapi.craigslist.org", now = 5_000))
+        assertNull(jar.header("sapi.craigslist.org", now = 20_000))
+        jar.save("sapi.craigslist.org", "b=2")
+        jar.save("sapi.craigslist.org", "b=; Max-Age=0")
+        assertNull(jar.header("sapi.craigslist.org", now = 20_000))
+    }
+}

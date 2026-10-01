@@ -1,0 +1,162 @@
+{
+"apiVersion": 8,
+"configId": "9dacaa504915c9a6574ed9eb409e48525984529afbf4e20dff1a811ee707d9f0",
+"configTs": 1790812805,
+"data": {
+"items": [
+{
+"attributes": [
+{
+"forSearch": {
+"auto_make_model": "Mazda MX-5 Grand Touring"
+},
+"label": "make/model",
+"postingAttributeKey": "auto_make_model",
+"specialType": "makemodel",
+"value": "Mazda MX-5 Grand Touring"
+},
+{
+"label": "year",
+"postingAttributeKey": "auto_year",
+"specialType": "auto_year",
+"value": "2021"
+},
+{
+"label": "VIN",
+"postingAttributeKey": "auto_vin",
+"specialType": "key_value",
+"value": "SAMPLEVIN00000000"
+},
+{
+"forSearch": {
+"condition": "40"
+},
+"label": "condition",
+"postingAttributeKey": "condition",
+"specialType": "key_value",
+"value": "good"
+},
+{
+"forSearch": {
+"auto_cylinders": "2"
+},
+"label": "cylinders",
+"postingAttributeKey": "auto_cylinders",
+"specialType": "key_value",
+"value": "4 cylinders"
+},
+{
+"forSearch": {
+"auto_drivetrain": "2"
+},
+"label": "drive",
+"postingAttributeKey": "auto_drivetrain",
+"specialType": "key_value",
+"value": "rwd"
+},
+{
+"forSearch": {
+"auto_fuel_type": "1"
+},
+"label": "fuel",
+"postingAttributeKey": "auto_fuel_type",
+"specialType": "key_value",
+"value": "gas"
+},
+{
+"label": "odometer",
+"postingAttributeKey": "auto_miles",
+"specialType": "key_value",
+"value": "22,000"
+},
+{
+"forSearch": {
+"auto_paint": "4"
+},
+"label": "paint color",
+"postingAttributeKey": "auto_paint",
+"specialType": "key_value",
+"value": "grey"
+},
+{
+"forSearch": {
+"auto_title_status": "1"
+},
+"label": "title status",
+"postingAttributeKey": "auto_title_status",
+"specialType": "key_value",
+"value": "clean"
+},
+{
+"forSearch": {
+"auto_transmission": "1"
+},
+"label": "transmission",
+"postingAttributeKey": "auto_transmission",
+"specialType": "key_value",
+"value": "manual"
+},
+{
+"forSearch": {
+"auto_bodytype": "2"
+},
+"label": "type",
+"postingAttributeKey": "auto_bodytype",
+"specialType": "key_value",
+"value": "convertible"
+}
+],
+"autoVinData": [],
+"body": "First line of the sample listing.<br>\n<br>\nMODS:<br>\n- one<br>\n- two &amp; three<br>\n<a href=\"https://example.com/x\">a link</a>",
+"category": "cars & trucks - by owner",
+"categoryAbbr": "cto",
+"categoryId": 145,
+"hasContactInfo": true,
+"images": [
+"3:00w0w_TqEQX1TUvp_0ny0hJ",
+"3:00L0L_h9MIL0W3Z1n_0ny0hJ",
+"3:00u0u_bjjyzndQJIl_0ny0hJ",
+"3:00h0h_dG4PVtiFH0o_0Cz0t2",
+"3:00505_1rCHG5QvDAj_0Cz0t2",
+"3:00K0K_4pAaxWzP2Ne_0Cz0t2",
+"3:01212_aAOGtU5QITP_0lR0t2",
+"3:00e0e_kWLshWWQRr5_0Cz0t2",
+"3:00909_9OLqGSOV2sU_0Cz0t2",
+"3:00u0u_lbj19QKonWR_0dl0hJ",
+"3:00Z0Z_gps6VI2vdnf_0Cz0t2",
+"3:00404_aQiGrPkP6GC_0Cz0t2",
+"3:00d0d_gnjXhrLKh0F_0Cz0t2"
+],
+"location": {
+"area": "SF bay area",
+"areaAbbr": "sfo",
+"areaId": 1,
+"description": "",
+"displayAddress": "",
+"hostname": "sfbay",
+"lat": 37.5308,
+"lon": -121.9712,
+"neighborhood": "fremont / union city / newark",
+"subArea": "east bay",
+"subareaAbbr": "eby",
+"type": "area"
+},
+"notices": [],
+"postedDate": 1790813736,
+"postingId": 7975810458,
+"postingUuid": "fUrzJ5PhEyjBs9xUVCp7Ru",
+"price": 29000,
+"priceString": "$29,000",
+"recordCreated": 1790813736,
+"section": "for sale",
+"seeMyOther": 0,
+"streetAddress": 0,
+"title": "2021 Sample Roadster",
+"updatedDate": 1790813762,
+"url": "https://www.craigslist.org/view/d/sample-listing/fUrzJ5PhEyjBs9xUVCp7Ru"
+}
+],
+"lang": "en_US"
+},
+"errors": []
+}

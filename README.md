@@ -1,0 +1,63 @@
+# Corkboard
+
+A native Android app for browsing craigslist. Material 3, light and dark themes, and the filters
+each category really has, on a phone with no Google services.
+
+Corkboard is an independent project. It is not affiliated with, endorsed by, or connected to
+craigslist.
+
+- **Every filter the site has.** Cars get make and model, year, odometer, drive, transmission,
+  cylinders, fuel, body type, paint color and title status. Housing gets bedrooms, bathrooms,
+  square feet, pets, laundry and parking. The site describes each category's filters in its search
+  responses and the app draws them from that, so nothing is hand-built per category.
+- **Grid or list**, with photos, price, mileage or bedrooms, place and age at a glance.
+- **Sort and sub-area** one tap away.
+- **Full listings**: photo gallery with pinch to zoom, attributes, description, map.
+- **Favorites and hidden listings**, kept on the phone.
+- **Saved searches with alerts.** The phone checks every few hours and tells you what is new.
+  No push service, no account.
+- **Light, dark and wallpaper colors.**
+- **No Google services needed.** Works on GrapheneOS and other de-Googled phones.
+
+Replying to a listing, posting and account pages open in your browser.
+
+Requires Android 10 or later on a 64-bit ARM phone.
+
+## How it talks to craigslist
+
+There is no Corkboard server. The app on your phone talks to craigslist directly, the same way
+the site's own web page does, and only when you do something: open a category, change a filter,
+scroll, open a listing.
+
+- **The same requests as the web page.** Search results, listing details and make-and-model
+  suggestions come from the JSON endpoints the site's own search page calls, in the same sequence
+  the page uses.
+- **Chromium's network stack.** Requests go through Cronet, the network library inside Chrome, so
+  the app is on the wire what it claims to be: Chrome on Android, at the version of Cronet in the
+  APK.
+- **At your pace.** Results are cached for as long as the site says they may be. Saved searches
+  are checked a few times a day, one at a time.
+- **Nothing collected.** No analytics, no crash reporting, no accounts. Favorites, saved searches
+  and settings stay in the app's private storage. The only cookie is the one craigslist gives
+  every browser, and Settings can clear it.
+
+## Building
+
+```
+./gradlew assembleDebug
+```
+
+JDK 17 and Android SDK platform 37.0. The first build downloads a prebuilt Cronet (15 MB).
+
+## Release channels
+
+- **Stable**: the newest nightly, promoted once a week.
+- **Nightly**: built from `main` every day it changes.
+- **Canary**: every push to the `canary` branch.
+
+All three share one signing key and one rising version code, so moving between them is a plain
+update.
+
+## License
+
+GPL-3.0. Cronet is from the Chromium project under its BSD license.

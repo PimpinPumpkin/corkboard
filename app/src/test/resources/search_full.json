@@ -1,0 +1,647 @@
+{
+"apiVersion": 8,
+"configId": "9dacaa504915c9a6574ed9eb409e48525984529afbf4e20dff1a811ee707d9f0",
+"configTs": 1790812805,
+"data": {
+"areas": {
+"1": {
+"areaUnits": "ft",
+"currency": "USD",
+"distanceUnits": "mi",
+"name": "sfbay"
+}
+},
+"bundleDups": 0,
+"cacheId": "MToB1DA8hR2acKXrPrDMvzIM1fvF3NraGfCS7zITx8Nh2I_K7gDGmCj_skgqXRbhG_GtNsheIKruvX-ng5SrB4MO30UvP0JMZACtNp5o3dyYLEJdhk-bBcLX6U0XH8vhG4NE6imLg93EQM8aD-pvU56rllOx",
+"cacheTs": 1790840893,
+"canonicalUrl": "//www.craigslist.org/search/area/sfbay?cat=sss",
+"categoryAbbr": "sss",
+"decode": {
+"locationDescriptions": [
+0,
+"place 1",
+"place 2",
+"place 3",
+"place 4",
+"place 5",
+"place 6",
+"place 7",
+"place 8",
+"place 9",
+"place 10",
+"place 11",
+"place 12",
+"place 13",
+"place 14",
+"place 15",
+"place 16",
+"place 17",
+"place 18",
+"place 19",
+"place 20",
+"place 21",
+"place 22",
+"place 23",
+"place 24",
+"place 25",
+"place 26",
+"place 27",
+"place 28",
+"place 29",
+"place 30",
+"place 31",
+"place 32",
+"place 33",
+"place 34",
+"place 35",
+"place 36",
+"place 37",
+"place 38",
+"place 39",
+"place 40"
+],
+"locations": [
+0,
+[
+1,
+"sfbay",
+"sby"
+],
+[
+1,
+"sfbay",
+"sfc"
+],
+[
+1,
+"sfbay",
+"pen"
+],
+[
+1,
+"sfbay",
+"scz"
+],
+[
+1,
+"sfbay",
+"eby"
+],
+[
+1,
+"sfbay",
+"nby"
+]
+],
+"maxPostedDate": 1790840742,
+"minDate": 1782950400,
+"minPostedDate": 1790814566,
+"minPostingId": 7925551486,
+"neighborhoods": [
+0,
+"hood 1",
+"hood 2",
+"hood 3",
+"hood 4",
+"hood 5",
+"hood 6",
+"hood 7",
+"hood 8",
+"hood 9",
+"hood 10",
+"hood 11",
+"hood 12",
+"hood 13",
+"hood 14",
+"hood 15",
+"hood 16",
+"hood 17",
+"hood 18",
+"hood 19",
+"hood 20",
+"hood 21",
+"hood 22",
+"hood 23",
+"hood 24",
+"hood 25",
+"hood 26",
+"hood 27",
+"hood 28",
+"hood 29",
+"hood 30",
+"hood 31",
+"hood 32",
+"hood 33",
+"hood 34",
+"hood 35",
+"hood 36",
+"hood 37",
+"hood 38",
+"hood 39",
+"hood 40"
+],
+"version": 2
+},
+"detailsOrder": "date",
+"filterButtons": [
+{
+"buttonLabel": "price",
+"formConfig": {
+"input_prefix": "$",
+"is_default_button": 1,
+"label": "price",
+"maxVal": {
+"name": "max_price",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_price",
+"placeholder": "min"
+},
+"name": "price",
+"type": "range"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "condition",
+"formConfig": {
+"is_default_button": 1,
+"label": "condition",
+"name": "condition",
+"options": [
+{
+"label": "new",
+"value": "10"
+},
+{
+"label": "like new",
+"value": "20"
+},
+{
+"label": "excellent",
+"value": "30"
+},
+{
+"label": "good",
+"value": "40"
+},
+{
+"label": "fair",
+"value": "50"
+},
+{
+"label": "salvage",
+"value": "60"
+}
+],
+"type": "multi"
+},
+"isSet": ""
+},
+{
+"buttonLabel": "sold by",
+"formConfig": {
+"is_default_button": 1,
+"label": "sold by",
+"name": "purveyor",
+"options": [
+{
+"label": "all",
+"value": "all"
+},
+{
+"label": "owner",
+"value": "owner"
+},
+{
+"label": "dealer",
+"value": "dealer"
+}
+],
+"type": "select",
+"variant": "radio"
+},
+"isSet": ""
+}
+],
+"filters": [
+{
+"autocomplete": "search",
+"label": "query",
+"name": "query",
+"type": "text"
+},
+{
+"name": "vicinity",
+"type": "hidden"
+},
+{
+"label": "sort by",
+"name": "sort",
+"options": [
+{
+"label": "newest",
+"value": "date"
+},
+{
+"label": "oldest",
+"value": "dateoldest"
+},
+{
+"label": "﹩→ $$$",
+"value": "priceasc"
+},
+{
+"label": "$$$ → ﹩",
+"value": "pricedsc"
+},
+{
+"label": "distance",
+"value": "dist"
+}
+],
+"type": "select",
+"value": "date"
+},
+{
+"checked": false,
+"label": "free",
+"name": "free",
+"type": "boolean",
+"value": 1
+},
+{
+"input_prefix": "$",
+"label": "price",
+"maxVal": {
+"name": "max_price",
+"placeholder": "max"
+},
+"minVal": {
+"name": "min_price",
+"placeholder": "min"
+},
+"name": "price",
+"type": "range",
+"variant": "range"
+},
+{
+"label": "sold by",
+"name": "purveyor",
+"options": [
+{
+"label": "all",
+"value": "all"
+},
+{
+"label": "owner",
+"value": "owner"
+},
+{
+"label": "dealer",
+"value": "dealer"
+}
+],
+"type": "select"
+},
+{
+"autocomplete": "makemodel",
+"label": "make and model",
+"name": "auto_make_model",
+"type": "text",
+"variant": "text"
+},
+{
+"label": "condition",
+"name": "condition",
+"options": [
+{
+"label": "new",
+"value": 10
+},
+{
+"label": "like new",
+"value": 20
+},
+{
+"label": "excellent",
+"value": 30
+},
+{
+"label": "good",
+"value": 40
+},
+{
+"label": "fair",
+"value": 50
+},
+{
+"label": "salvage",
+"value": 60
+}
+],
+"type": "multi",
+"variant": "standard"
+},
+{
+"label": "use craigslist sub-area",
+"name": "subarea",
+"options": [
+{
+"label": "san francisco",
+"location": {
+"city": "san francisco",
+"lat": 37.774419,
+"lon": -122.413431,
+"radius": 50
+},
+"value": "sfc"
+},
+{
+"label": "south bay",
+"location": {
+"city": "south bay",
+"lat": 37.331272,
+"lon": -121.925176,
+"radius": 50
+},
+"value": "sby"
+},
+{
+"label": "east bay",
+"location": {
+"city": "east bay",
+"lat": 37.816622,
+"lon": -122.097694,
+"radius": 50
+},
+"value": "eby"
+},
+{
+"label": "peninsula",
+"location": {
+"city": "peninsula",
+"lat": 37.51342,
+"lon": -122.237935,
+"radius": 50
+},
+"value": "pen"
+},
+{
+"label": "north bay",
+"location": {
+"city": "north bay",
+"lat": 38.213112,
+"lon": -122.55265,
+"radius": 50
+},
+"value": "nby"
+},
+{
+"label": "santa cruz",
+"location": {
+"city": "santa cruz",
+"lat": 36.981202,
+"lon": -121.961466,
+"radius": 50
+},
+"value": "scz"
+}
+],
+"type": "select",
+"value": ""
+},
+{
+"form": [
+{
+"label": "search titles only",
+"name": "srchType",
+"type": "boolean",
+"value": "T"
+},
+{
+"label": "has image",
+"name": "hasPic",
+"type": "boolean",
+"value": 1
+},
+{
+"label": "posted today",
+"name": "postedToday",
+"type": "boolean",
+"value": 1
+},
+{
+"label": "hide duplicates",
+"name": "bundleDuplicates",
+"type": "boolean",
+"value": 1
+}
+],
+"name": "basic bools",
+"type": "group"
+},
+{
+"form": [
+{
+"label": "delivery available",
+"name": "delivery_available",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+},
+{
+"label": "cryptocurrency ok",
+"name": "crypto_currency_ok",
+"type": "boolean",
+"value": 1,
+"variant": "checkbox"
+}
+],
+"name": "delivery_available",
+"type": "group"
+},
+{
+"label": "language of posting",
+"name": "language",
+"options": [
+{
+"label": "afrikaans",
+"value": 1
+},
+{
+"label": "català",
+"value": 2
+},
+{
+"label": "dansk",
+"value": 3
+},
+{
+"label": "deutsch",
+"value": 4
+},
+{
+"label": "english",
+"value": 5
+},
+{
+"label": "español",
+"value": 6
+},
+{
+"label": "suomi",
+"value": 7
+},
+{
+"label": "français",
+"value": 8
+},
+{
+"label": "italiano",
+"value": 9
+},
+{
+"label": "nederlands",
+"value": 10
+},
+{
+"label": "norsk",
+"value": 11
+},
+{
+"label": "português",
+"value": 12
+},
+{
+"label": "svenska",
+"value": 13
+},
+{
+"label": "filipino",
+"value": 14
+},
+{
+"label": "türkçe",
+"value": 15
+},
+{
+"label": "中文",
+"value": 16
+},
+{
+"label": "العربية",
+"value": 17
+},
+{
+"label": "日本語",
+"value": 18
+},
+{
+"label": "한국말",
+"value": 19
+},
+{
+"label": "русский",
+"value": 20
+},
+{
+"label": "tiếng việt",
+"value": 21
+}
+],
+"type": "multi",
+"variant": "standard"
+}
+],
+"humanReadableParams": [
+{
+"key": "sort",
+"name": "sort",
+"value": "newest"
+}
+],
+"items": [
+[
+24997171,
+26176,
+149,
+300,
+"1:1~37.387~-121.902",
+"0t20CI"
+],
+[
+29925589,
+26174,
+149,
+150,
+"1:1~37.387~-121.902",
+"0t20CI"
+],
+[
+32477899,
+26171,
+149,
+300,
+"1:1~37.387~-121.902",
+"0t20CI"
+],
+[
+6017822,
+19379,
+5,
+5,
+"5:39:22~37.6873~-121.8957",
+"0uY0ne"
+],
+[
+6018457,
+19378,
+97,
+40,
+"5:39:22~37.6873~-121.8957",
+"084084"
+],
+[
+31670809,
+19378,
+97,
+20,
+"5:39:22~37.6873~-121.8957",
+"0pC0Cq",
+-117
+],
+[
+6018410,
+19378,
+107,
+10,
+"5:39:22~37.6873~-121.8957",
+"0lM0t2"
+]
+],
+"lang": "en_US",
+"location": {
+"areaId": 1,
+"city": "SF bay area",
+"country": "US",
+"lat": 37.5,
+"lon": -122.25,
+"postal": "",
+"radius": 60,
+"region": "CA",
+"url": "sfbay.craigslist.org"
+},
+"maxPostedTs": 1790840742,
+"pageTitle": "sample",
+"params": {
+"query": ""
+},
+"resultsOrder": "date",
+"totalResultCount": 258425,
+"updated": 1790841654,
+"vicinity": null
+},
+"errors": []
+}

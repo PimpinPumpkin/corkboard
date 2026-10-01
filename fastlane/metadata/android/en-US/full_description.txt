@@ -1,0 +1,7 @@
+Corkboard is a native client for craigslist with Material 3, light and dark themes, and every filter each category has: make and model, year, odometer and title status for cars; bedrooms, pets and laundry for housing.
+
+Favorites and saved searches stay on the phone. Saved-search alerts are checked by the phone itself every few hours, with no push service and no account.
+
+The app talks to craigslist directly from your phone. There is no Corkboard server, no analytics and no Google services. Replying, posting and account pages open in your browser.
+
+Corkboard is an independent project and is not affiliated with craigslist.

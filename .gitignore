@@ -1,0 +1,16 @@
+*.iml
+.gradle/
+.kotlin/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+*.apk
+*.aab
+keystore.properties
+*.jks
+# 15 MB prebuilt Cronet; app/build.gradle.kts downloads it on first build.
+app/libs/*.aar
+# Written by CI from the commit log just before a release build; local builds have none.
+app/src/main/assets/whatsnew.txt
