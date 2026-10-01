@@ -101,18 +101,18 @@ class RequestShapeTest {
 
     @Test
     fun `the front door's redirect names the nearest site`() {
-        assertEquals("seattle", ClUrls.hostOf("https://www.craigslist.org/area/seattle"))
+        assertEquals("chicago", ClUrls.hostOf("https://www.craigslist.org/area/chicago"))
         assertEquals("sfbay", ClUrls.hostOf("https://sfbay.craigslist.org/"))
         assertNull(ClUrls.hostOf("https://www.craigslist.org/about/sites"))
-        assertNull(ClUrls.hostOf("https://example.com/area/seattle"))
+        assertNull(ClUrls.hostOf("https://example.com/area/chicago"))
     }
 
     @Test
     fun `a point is looked up by rounded coordinates, and read back as a site and postal code`() {
-        assertEquals("https://rapi.craigslist.org/web/v8/locations?cc=US&lang=en&lat=48.75&lon=-122.48", ClUrls.locate(48.75, -122.48))
-        val found = Parsers.located("""{"data":{"items":[{"areaId":217,"city":"Oakland","country":"US","lat":48.76,"lon":-122.487,"postal":"94103","radius":15,"region":"WA","subareaId":0,"url":"sfbay.craigslist.org"}],"lang":"en"},"errors":[]}""")!!
-        assertEquals(217, found.areaId)
-        assertEquals("Oakland", found.city)
+        assertEquals("https://rapi.craigslist.org/web/v8/locations?cc=US&lang=en&lat=37.77&lon=-122.41", ClUrls.locate(37.77, -122.41))
+        val found = Parsers.located("""{"data":{"items":[{"areaId":1,"city":"San Francisco","country":"US","lat":37.77,"lon":-122.41,"postal":"94103","radius":15,"region":"CA","subareaId":1,"url":"sfbay.craigslist.org"}],"lang":"en"},"errors":[]}""")!!
+        assertEquals(1, found.areaId)
+        assertEquals("San Francisco", found.city)
         assertEquals("94103", found.postal)
         assertNull(Parsers.located("""{"data":{"items":[]},"errors":[]}"""))
         // A search answers with the place it ran for; a postal code the site ignored comes back empty.
@@ -143,7 +143,7 @@ class RequestShapeTest {
         val l = ClUrls.listingFromLink("https://www.craigslist.org/view/d/sample-1999-sedan-low-miles/abcDEF0123456789abcdef")!!
         assertEquals("abcDEF0123456789abcdef", l.uuid)
         assertEquals("sample-1999-sedan-low-miles", l.slug)
-        assertEquals("abcDEF0123456789abcdef", ClUrls.listingFromLink("Look at this https://www.craigslist.org/view/abcDEF0123456789abcdef?lang=en")!!.uuid)
+        assertEquals("zyxWVU9876543210zyxwvu", ClUrls.listingFromLink("Look at this https://www.craigslist.org/view/zyxWVU9876543210zyxwvu?lang=en")!!.uuid)
         assertNull(ClUrls.listingFromLink("https://www.craigslist.org/about/help"))
         assertNull(ClUrls.listingFromLink("https://evil.example/www.craigslist.org/view/abcDEF0123456789abcdef"))
         assertNull(ClUrls.listingFromLink("just some shared text"))
