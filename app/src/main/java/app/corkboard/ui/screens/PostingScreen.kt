@@ -400,9 +400,8 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                                 }
                             }
                         }
-                        // The map: above the description unless the user moved it below or turned it off.
-                        // Above is the default because some descriptions run to pages, and where the
-                        // thing is matters sooner. With the map off, its tiles are never requested.
+                        // The map: below the description unless the user moved it above or turned it off.
+                        // With the map off, its tiles are never requested.
                         val showMap by store.showMap.collectAsStateWithLifecycle()
                         val mapBelow by store.mapBelow.collectAsStateWithLifecycle()
                         val lat = p.lat ?: listing.lat

@@ -231,9 +231,9 @@ class Store(context: Context) {
     // ---- the map on a listing ----
 
     private val _showMap = MutableStateFlow(prefs.getBoolean("showMap", true))
-    private val _mapBelow = MutableStateFlow(prefs.getBoolean("mapBelow", false))
+    private val _mapBelow = MutableStateFlow(prefs.getBoolean("mapBelow", true))
 
-    /** Whether a listing shows its map at all, and whether it sits below the description instead of above it. */
+    /** Whether a listing shows its map at all, and whether it sits below the description (the default) or above it. */
     val showMap: StateFlow<Boolean> = _showMap.asStateFlow()
     val mapBelow: StateFlow<Boolean> = _mapBelow.asStateFlow()
 

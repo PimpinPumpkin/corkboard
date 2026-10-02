@@ -82,7 +82,7 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
             Toggle("Map on a listing", "Show a small map of roughly where the listing is. Off, no map is loaded at all.", showMap) { store.setShowMap(it) }
             if (showMap) {
                 Spacer(Modifier.height(10.dp))
-                Toggle("Map below the description", "Put the map after the listing's text instead of before it.", mapBelow) { store.setMapBelow(it) }
+                Toggle("Map below the description", "Turn off to put the map before the listing's text instead of after it.", mapBelow) { store.setMapBelow(it) }
             }
 
             Heading("Listings language")
