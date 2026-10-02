@@ -28,7 +28,7 @@ Android 10 or later. Tap a button, install, done. No account.
   across the border.
 - **Light and dark themes**, grid or list, photos you can pinch to zoom, and the choice of whole
   or cropped photos.
-- **A map on every listing**, with no maps app needed.
+- **A map on every listing**, with no maps app needed. Move it below the text or turn it off.
 - **Favorites, your own lists, and private notes.** Share a list or save it as a spreadsheet.
 - **Press and hold any listing** for a quick preview with its photos, and like it, add it to a
   list, hide it or share it right there.

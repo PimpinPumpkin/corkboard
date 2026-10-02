@@ -400,23 +400,31 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
                                 }
                             }
                         }
-                        // Above the description: some run to pages, and where the thing is matters sooner.
+                        // The map: above the description unless the user moved it below or turned it off.
+                        // Above is the default because some descriptions run to pages, and where the
+                        // thing is matters sooner. With the map off, its tiles are never requested.
+                        val showMap by store.showMap.collectAsStateWithLifecycle()
+                        val mapBelow by store.mapBelow.collectAsStateWithLifecycle()
                         val lat = p.lat ?: listing.lat
                         val lon = p.lon ?: listing.lon
-                        if (lat != null && lon != null && (lat != 0.0 || lon != 0.0)) {
-                            Spacer(Modifier.height(12.dp))
-                            MiniMap(lat, lon, onOpen = {
-                                // A maps app if the phone has one; otherwise OpenStreetMap in the browser.
-                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lon?q=$lat,$lon"))) }
-                                    .onFailure { openInBrowser(context, "https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=14/$lat/$lon") }
-                            })
+                        val map: @Composable () -> Unit = {
+                            if (showMap && lat != null && lon != null && (lat != 0.0 || lon != 0.0)) {
+                                Spacer(Modifier.height(12.dp))
+                                MiniMap(lat, lon, onOpen = {
+                                    // A maps app if the phone has one; otherwise OpenStreetMap in the browser.
+                                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lon?q=$lat,$lon"))) }
+                                        .onFailure { openInBrowser(context, "https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=14/$lat/$lon") }
+                                })
+                            }
                         }
+                        if (!mapBelow) map()
                         Spacer(Modifier.height(12.dp))
                         val link = MaterialTheme.colorScheme.primary
                         val body = remember(p.bodyHtml, link) {
                             AnnotatedString.fromHtml(Format.bodyHtml(p.bodyHtml), linkStyles = TextLinkStyles(SpanStyle(color = link, textDecoration = TextDecoration.Underline)))
                         }
                         Panel { SelectionContainer { Text(body, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(20.dp)) } }
+                        if (mapBelow) map()
                         p.notices.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp)) }
                         Text(
                             listOfNotNull(

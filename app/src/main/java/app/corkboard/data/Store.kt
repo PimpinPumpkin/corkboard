@@ -51,7 +51,7 @@ class Store(context: Context) {
 
     // ---- backup ----
 
-    private val backedUp = listOf("theme", "language", "grid", "homeCountryOnly", "pinned", "fitResults", "fitListing")
+    private val backedUp = listOf("theme", "language", "grid", "homeCountryOnly", "pinned", "fitResults", "fitListing", "showMap", "mapBelow")
 
     /** Writes everything the app remembers into one zip. */
     fun backupTo(out: java.io.OutputStream) {
@@ -73,6 +73,8 @@ class Store(context: Context) {
             settings["grid"]?.let { putBoolean("grid", it == "true") }
             settings["fitResults"]?.let { putBoolean("fitResults", it == "true") }
             settings["fitListing"]?.let { putBoolean("fitListing", it == "true") }
+            settings["showMap"]?.let { putBoolean("showMap", it == "true") }
+            settings["mapBelow"]?.let { putBoolean("mapBelow", it == "true") }
             settings["homeCountryOnly"]?.let { putBoolean("homeCountryOnly", it == "true") }
         }.commit()
         return true
@@ -225,6 +227,18 @@ class Store(context: Context) {
 
     fun setFitResults(on: Boolean) { prefs.edit().putBoolean("fitResults", on).apply(); _fitResults.value = on }
     fun setFitListing(on: Boolean) { prefs.edit().putBoolean("fitListing", on).apply(); _fitListing.value = on }
+
+    // ---- the map on a listing ----
+
+    private val _showMap = MutableStateFlow(prefs.getBoolean("showMap", true))
+    private val _mapBelow = MutableStateFlow(prefs.getBoolean("mapBelow", false))
+
+    /** Whether a listing shows its map at all, and whether it sits below the description instead of above it. */
+    val showMap: StateFlow<Boolean> = _showMap.asStateFlow()
+    val mapBelow: StateFlow<Boolean> = _mapBelow.asStateFlow()
+
+    fun setShowMap(on: Boolean) { prefs.edit().putBoolean("showMap", on).apply(); _showMap.value = on }
+    fun setMapBelow(on: Boolean) { prefs.edit().putBoolean("mapBelow", on).apply(); _mapBelow.value = on }
 
     private val _grid = MutableStateFlow(prefs.getBoolean("grid", true))
     val grid: StateFlow<Boolean> = _grid.asStateFlow()

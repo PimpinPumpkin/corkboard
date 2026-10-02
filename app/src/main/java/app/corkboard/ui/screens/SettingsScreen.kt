@@ -76,6 +76,15 @@ fun SettingsScreen(store: Store, http: Http, onBack: () -> Unit) {
             Spacer(Modifier.height(10.dp))
             Toggle("Whole photos on a listing", "Show each photo in full in the listing's gallery instead of cropping it to fill.", fitListing) { store.setFitListing(it) }
 
+            Heading("Map")
+            val showMap by store.showMap.collectAsStateWithLifecycle()
+            val mapBelow by store.mapBelow.collectAsStateWithLifecycle()
+            Toggle("Map on a listing", "Show a small map of roughly where the listing is. Off, no map is loaded at all.", showMap) { store.setShowMap(it) }
+            if (showMap) {
+                Spacer(Modifier.height(10.dp))
+                Toggle("Map below the description", "Put the map after the listing's text instead of before it.", mapBelow) { store.setMapBelow(it) }
+            }
+
             Heading("Listings language")
             val language by store.language.collectAsStateWithLifecycle()
             var pickLanguage by remember { mutableStateOf(false) }
