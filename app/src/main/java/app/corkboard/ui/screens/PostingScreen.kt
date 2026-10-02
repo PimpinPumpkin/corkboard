@@ -178,6 +178,14 @@ fun PostingScreen(opened: Listing, api: ClApi, store: Store, archive: Archive, o
             val seen = opened.copy(postingId = fresh.postingId, postedAt = fresh.postedAt, title = fresh.title, priceText = fresh.priceText, imageIds = fresh.imageIds, place = fresh.place, lat = fresh.lat, lon = fresh.lon)
             store.addRecent(seen)
             store.setStatus(fresh.postingId, ListingStatus(priceNow = fresh.priceText, priceWas = snapshot?.priceWas?.takeIf { it != fresh.priceText }, checkedAt = System.currentTimeMillis() / 1000))
+            // The data endpoint can go on serving a deleted listing as if it were live; its page
+            // knows better. Asked after the listing is on screen, so nothing waits on it. What was
+            // just loaded stays as the saved copy: it is the last there will be.
+            api.goneReason(uuid)?.let { reason ->
+                gone = true
+                goneReason = reason
+                store.setStatus(fresh.postingId, ListingStatus(gone = true, priceNow = fresh.priceText, checkedAt = System.currentTimeMillis() / 1000))
+            }
             // The same thing posted again: keep it beside the old one the user saved, and link the two.
             fresh.repostOf?.let { old ->
                 store.carryOver(old, opened.copy(postingId = fresh.postingId, postedAt = fresh.postedAt, title = fresh.title, priceText = fresh.priceText, imageIds = fresh.imageIds, place = fresh.place, lat = fresh.lat, lon = fresh.lon))

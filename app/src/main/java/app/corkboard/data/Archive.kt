@@ -103,6 +103,9 @@ class Archive(context: Context, private val http: Http) {
             val body = api.postingRaw(uuid, fresh = true)
             val p = Parsers.posting(body)
             val snapshot = withContext(Dispatchers.IO) { save(uuid, body, p.priceText, now) }
+            // The data endpoint can go on serving a deleted listing; its page knows better. What it
+            // just sent is still worth having: it is the last copy of the listing there will be.
+            if (api.goneReason(uuid) != null) return ListingStatus(gone = true, priceNow = p.priceText, checkedAt = now)
             // A price the listing row itself remembers counts as "before" too, the first time around.
             val was = snapshot.priceWas ?: listing.priceText?.takeIf { p.priceText != null && it != p.priceText }
             ListingStatus(gone = false, priceNow = p.priceText, priceWas = was?.takeIf { it != p.priceText }, checkedAt = now)

@@ -81,6 +81,11 @@ object ClUrls {
         return Listing(postingId = 0, postedAt = 0, categoryId = 0, slug = m.groupValues[1].ifEmpty { null }, uuid = m.groupValues[2])
     }
 
+    /** The sentence a gone listing's page gives as its reason, or a plain one when it gives none. */
+    fun goneReason(page: String): String =
+        Regex("""This posting has (?:been|expired)[^<.]*\.?""").find(page)?.value?.trim()?.let { if (it.endsWith(".")) it else "$it." }
+            ?: "This listing has been deleted or has expired."
+
     /** The same two sizes the site's own page asks for. */
     val QUICK: Int get() = Calibration.current.quick
     val CHUNK: Int get() = Calibration.current.chunk
@@ -116,6 +121,20 @@ class ClApi(private val http: Http) {
 
     /** The hostname of the site craigslist itself would send this visitor to, or null. */
     suspend fun nearestHost(): String? = http.redirectTarget(ClUrls.FRONT_DOOR)?.let(ClUrls::hostOf)
+
+    /**
+     * Whether the listing's own page says it is gone, and why: "This posting has been deleted by
+     * its author." Null when the page is there, or when the site could not be asked.
+     *
+     * This is asked as well as the data endpoint because the two disagree: for a while after a
+     * listing is deleted (hours, sometimes) the data endpoint goes on serving it whole, as if it
+     * were live, while its page already answers 410 Gone. The page is the truth.
+     */
+    suspend fun goneReason(uuid: String): String? {
+        val r = http.probe(ClUrls.web(uuid, null)) ?: return null
+        if (r.code != 410 && r.code != 404) return null
+        return ClUrls.goneReason(r.text())
+    }
 
     /** The listing as the site sends it. Kept raw so the archive can store exactly what was shown. */
     suspend fun postingRaw(uuid: String, fresh: Boolean = false): String {

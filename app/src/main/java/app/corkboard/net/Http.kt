@@ -99,6 +99,46 @@ class Http(context: Context) {
     }
 
     /**
+     * How a page answers, without downloading it when it is simply there: a 200 is reported and
+     * dropped, anything else is read (it is short, and says why). Null when there was no answer.
+     */
+    suspend fun probe(url: String): HttpResponse? = suspendCancellableCoroutine { cont ->
+        val out = ByteArrayOutputStream()
+        val callback = object : UrlRequest.Callback() {
+            override fun onRedirectReceived(request: UrlRequest, info: UrlResponseInfo, newLocationUrl: String) = request.followRedirect()
+            override fun onResponseStarted(request: UrlRequest, info: UrlResponseInfo) {
+                if (info.httpStatusCode in 200..299) {
+                    request.cancel()
+                    if (cont.isActive) cont.resume(HttpResponse(info.httpStatusCode, ByteArray(0), null))
+                } else request.read(ByteBuffer.allocateDirect(32 * 1024))
+            }
+            override fun onReadCompleted(request: UrlRequest, info: UrlResponseInfo, buf: ByteBuffer) {
+                buf.flip()
+                val b = ByteArray(buf.remaining())
+                buf.get(b)
+                if (out.size() < 256 * 1024) out.write(b)
+                buf.clear()
+                request.read(buf)
+            }
+            override fun onSucceeded(request: UrlRequest, info: UrlResponseInfo) { if (cont.isActive) cont.resume(HttpResponse(info.httpStatusCode, out.toByteArray(), null)) }
+            override fun onFailed(request: UrlRequest, info: UrlResponseInfo?, error: CronetException) { if (cont.isActive) cont.resume(null) }
+            override fun onCanceled(request: UrlRequest, info: UrlResponseInfo?) { if (cont.isActive) cont.resume(null) }
+        }
+        val request = try {
+            engine.newUrlRequestBuilder(url, callback, executor).apply {
+                BrowserHeaders.headers(BrowserHeaders.Kind.Page, BuildConfig.CRONET_VERSION, acceptLanguage()).forEach { (k, v) -> addHeader(k, v) }
+                cookies.header(URI(url).host.orEmpty())?.let { addHeader("Cookie", it) }
+                disableCache()
+            }.build()
+        } catch (t: Throwable) {
+            cont.resume(null)
+            return@suspendCancellableCoroutine
+        }
+        cont.invokeOnCancellation { request.cancel() }
+        request.start()
+    }
+
+    /**
      * Where [url] redirects to, without going there. craigslist's front door sends each visitor to
      * the site nearest their network address; the destination is the answer, the page is not needed.
      */

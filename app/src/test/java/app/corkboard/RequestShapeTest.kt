@@ -149,6 +149,14 @@ class RequestShapeTest {
         assertNull(ClUrls.listingFromLink("just some shared text"))
     }
 
+    @Test
+    fun `a gone listing's page gives its own reason`() {
+        assertEquals("This posting has been deleted by its author.", ClUrls.goneReason("<div class=\"removed\"><h2>This posting has been deleted by its author.</h2></div>"))
+        assertEquals("This posting has been flagged for removal.", ClUrls.goneReason("<p>This posting has been flagged for removal. [?]</p>"))
+        assertEquals("This posting has expired.", ClUrls.goneReason("<h2>This posting has expired</h2>"))
+        assertEquals("This listing has been deleted or has expired.", ClUrls.goneReason("<html>Page Not Found</html>"))
+    }
+
     // ---- headers ----
 
     @Test

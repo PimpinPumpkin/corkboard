@@ -86,6 +86,8 @@ object SelfCheck {
 
             step = "gone listing"
             check(runCatching { api.postingRaw("zzzzzzzzzzzzzzzzzzzzzz") }.exceptionOrNull() is GoneException) { "a missing listing is not reported as gone" }
+            check(api.goneReason("zzzzzzzzzzzzzzzzzzzzzz") != null) { "a missing listing's page is not reported as gone" }
+            check(api.goneReason(first.uuid) == null) { "a live listing's page is reported as gone" }
 
             step = "image"
             val image = http.get(Images.url(first.imageIds.first(), Images.THUMB), BrowserHeaders.Kind.Image)

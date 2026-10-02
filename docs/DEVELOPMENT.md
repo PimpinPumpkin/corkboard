@@ -39,7 +39,9 @@ See README.md for what it does and how it talks to the site.
 - **The country gate is client-side** (`Store.countryGate`): rows are dropped by their site's country,
   so a border search fetches several batches to fill a screen. Odometer units are per listing.
 - **The archive** (`data/Archive.kt`) keeps the raw response of every listing opened (newest 400) and,
-  for kept listings, their photos, fetched one at a time. A 404 from `rapi/postings` means gone;
+  for kept listings, their photos, fetched one at a time. A 404 from `rapi/postings`, or its stub marked `unavailable`, means gone, but
+  `rapi` can go on serving a deleted listing whole for hours: the listing's own page
+  (`www.craigslist.org/view/<uuid>`, 410 when gone) is the authority and is asked as well (`ClApi.goneReason`);
   the listing screen then shows the saved copy. `repostOf` in a listing names the posting it replaces;
   that link comes from craigslist, the app does no matching of its own. A repost of something the user
   kept is added beside the old one, never in place of it.
