@@ -51,7 +51,7 @@ class Store(context: Context) {
 
     // ---- backup ----
 
-    private val backedUp = listOf("theme", "language", "grid", "homeCountryOnly", "pinned", "fitResults", "fitListing", "showMap", "mapBelow")
+    private val backedUp = listOf("theme", "language", "grid", "homeCountryOnly", "pinned", "pinnedForums", "fitResults", "fitListing", "showMap", "mapBelow")
 
     /** Writes everything the app remembers into one zip. */
     fun backupTo(out: java.io.OutputStream) {
@@ -70,6 +70,7 @@ class Store(context: Context) {
             settings["theme"]?.let { putString("theme", it) }
             settings["language"]?.let { putString("language", it) }
             settings["pinned"]?.let { putString("pinned", it) }
+            settings["pinnedForums"]?.let { putString("pinnedForums", it) }
             settings["grid"]?.let { putBoolean("grid", it == "true") }
             settings["fitResults"]?.let { putBoolean("fitResults", it == "true") }
             settings["fitListing"]?.let { putBoolean("fitListing", it == "true") }
@@ -187,6 +188,24 @@ class Store(context: Context) {
         val next = if (abbr in _pinned.value) _pinned.value - abbr else _pinned.value + abbr
         prefs.edit().putString("pinned", next.joinToString(",")).apply()
         _pinned.value = next
+    }
+
+    // ---- pinned forums ----
+
+    private val _pinnedForums = MutableStateFlow(
+        prefs.getString("pinnedForums", null)?.split('|')?.mapNotNull { l -> l.substringBefore(':').toIntOrNull()?.let { Forum(it, l.substringAfter(':')) } }.orEmpty(),
+    )
+
+    /**
+     * The forums kept at the top of the forum list, with their names so they show before the list
+     * loads. Kept on one line ("5:automotive|26:pet & animal") because the backup's settings are one per line.
+     */
+    val pinnedForums: StateFlow<List<Forum>> = _pinnedForums.asStateFlow()
+
+    fun togglePinnedForum(forum: Forum) {
+        val next = if (_pinnedForums.value.any { it.id == forum.id }) _pinnedForums.value.filter { it.id != forum.id } else _pinnedForums.value + forum
+        prefs.edit().putString("pinnedForums", next.joinToString("|") { "${it.id}:${it.name.replace("|", "/")}" }).apply()
+        _pinnedForums.value = next
     }
 
     // ---- other countries ----

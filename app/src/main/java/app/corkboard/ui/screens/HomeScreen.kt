@@ -65,6 +65,7 @@ import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.PushPin
@@ -134,6 +135,7 @@ fun HomeScreen(
     onFavorites: () -> Unit,
     onSaved: () -> Unit,
     onSettings: () -> Unit,
+    onForums: () -> Unit,
 ) {
     area ?: return
     val saved by store.saved.collectAsStateWithLifecycle()
@@ -180,6 +182,7 @@ fun HomeScreen(
                         TonalIcon(Icons.Outlined.BookmarkBorder, "Saved searches", onSaved)
                     }
                     TonalIcon(Icons.Outlined.FavoriteBorder, "Favorites", onFavorites)
+                    TonalIcon(Icons.Outlined.Forum, "Forums", onForums)
                 }
             }
             Calibration.current.notice?.let { notice ->

@@ -154,6 +154,18 @@ class ClApi(private val http: Http) {
         if (Calibration.adopt(text, signature)) text to signature else null
     }.getOrNull()
 
+    // The forums are plain pages, fetched the way a browser opens them.
+    private suspend fun page(url: String): String {
+        val r = http.get(url, BrowserHeaders.Kind.Page, fresh = true)
+        if (!r.ok) throw ApiException(if (r.code == 403) "craigslist is refusing requests right now. Try again later." else "craigslist answered ${r.code}")
+        return r.text()
+    }
+
+    suspend fun forums(): List<Forum> = ForumParsers.forums(page(ForumUrls.INDEX))
+    suspend fun forumThreads(forumId: Int, older: Long? = null): ForumPage = ForumParsers.threads(page(ForumUrls.threads(forumId, older)))
+    suspend fun forumThread(postId: Long): ForumThreadPage = ForumParsers.thread(page(ForumUrls.thread(postId)))
+    suspend fun forumBody(postId: Long): String? = ForumParsers.body(page(ForumUrls.post(postId)))
+
     suspend fun posting(uuid: String): Posting = Parsers.posting(postingRaw(uuid))
     suspend fun suggest(type: String, text: String): List<String> = Parsers.suggestions(get(ClUrls.suggest(type, text)))
 }

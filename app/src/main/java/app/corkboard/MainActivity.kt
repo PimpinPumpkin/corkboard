@@ -38,7 +38,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import app.corkboard.data.Listing
 import app.corkboard.data.SearchQuery
+import app.corkboard.ui.ForumState
 import app.corkboard.ui.ResultsState
+import app.corkboard.ui.ThreadState
+import app.corkboard.ui.screens.ForumScreen
+import app.corkboard.ui.screens.ForumsScreen
+import app.corkboard.ui.screens.ThreadScreen
 import androidx.compose.runtime.CompositionLocalProvider
 import app.corkboard.ui.components.LocalPhotoFit
 import app.corkboard.ui.components.PhotoFit
@@ -65,6 +70,9 @@ sealed interface Screen {
     class Results(val state: ResultsState) : Screen
     class Posting(val listing: Listing) : Screen
     class ShelfOf(val shelf: Shelf) : Screen
+    data object Forums : Screen
+    class Forum(val state: ForumState) : Screen
+    class Thread(val state: ThreadState) : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -134,7 +142,12 @@ class MainActivity : ComponentActivity() {
                     val area by app.store.area.collectAsStateWithLifecycle()
                     val stack = remember { mutableStateListOf<Screen>(Screen.Home) }
                     fun pop() {
-                        (stack.removeAt(stack.lastIndex) as? Screen.Results)?.state?.close()
+                        when (val gone = stack.removeAt(stack.lastIndex)) {
+                            is Screen.Results -> gone.state.close()
+                            is Screen.Forum -> gone.state.close()
+                            is Screen.Thread -> gone.state.close()
+                            else -> {}
+                        }
                     }
                     fun open(query: SearchQuery) {
                         stack += Screen.Results(ResultsState(app.api, app.store, query))
@@ -174,6 +187,7 @@ class MainActivity : ComponentActivity() {
                                 onFavorites = { stack += Screen.Favorites },
                                 onSaved = { stack += Screen.Saved },
                                 onSettings = { stack += Screen.Settings },
+                                onForums = { stack += Screen.Forums },
                             )
                             Screen.Areas -> AreaScreen(
                                 api = app.api,
@@ -184,6 +198,9 @@ class MainActivity : ComponentActivity() {
                             Screen.Favorites -> ListsScreen(app.store, onBack = ::pop, onOpen = { stack += Screen.ShelfOf(it) })
                             is Screen.ShelfOf -> ShelfScreen(screen.shelf, app.store, app.api, app.archive, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
                             Screen.Saved -> SavedScreen(app.store, onBack = ::pop, onOpen = ::open)
+                            Screen.Forums -> ForumsScreen(app.api, app.store, onBack = ::pop, onOpen = { stack += Screen.Forum(ForumState(app.api, it)) })
+                            is Screen.Forum -> ForumScreen(screen.state, onBack = ::pop, onOpen = { t -> stack += Screen.Thread(ThreadState(app.api, t.root.id, t.root.title, screen.state.forum)) })
+                            is Screen.Thread -> ThreadScreen(screen.state, onBack = ::pop)
                             Screen.Settings -> SettingsScreen(app.store, app.http, onBack = ::pop)
                             is Screen.Results -> ResultsScreen(screen.state, app.api, app.store, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })
                             is Screen.Posting -> PostingScreen(screen.listing, app.api, app.store, app.archive, onBack = ::pop, onOpen = { stack += Screen.Posting(it) })

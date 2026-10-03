@@ -126,7 +126,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 
-private fun openInBrowser(context: Context, url: String) {
+internal fun openInBrowser(context: Context, url: String) {
     runCatching { CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, Uri.parse(url)) }
         .onFailure { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }
 }

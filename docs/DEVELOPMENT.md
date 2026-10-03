@@ -51,6 +51,12 @@ See README.md for what it does and how it talks to the site.
   edit the value, bump `version`, run `scripts/sign-calibration.sh`, and commit `calibration.json`
   with `calibration.json.sig` to main. The signing key lives outside the repository; a unit test
   fails the build when the two files do not match.
+- **The forums are pages, not an API** (`data/Forums.kt`): `forums.craigslist.org` is a frameset whose
+  halves are fetched directly, as a browser opens a page: `?act=DF` lists a forum's threads, `?act=showThread`
+  one whole thread, `?act=Q` one post. A reply's level is the count of `: . .` in its row, and a title
+  ending in `§` has no body, so only the other posts are fetched, as they come on screen, two at a
+  time. Times are the site's clock, US Pacific. `ThreadLayout` indents a reply only where its parent
+  has more than one answer.
 - **Replying, posting and accounts go to the browser.** They sit behind the site's own checks.
 - The name and icon never use "craigslist" as a brand. The app says it is unaffiliated.
 
