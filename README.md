@@ -39,6 +39,8 @@ Android 10 or later. Tap a button, install, done. No account.
 - **See when a seller edits a listing.**
 - **Saved searches with alerts**, checked by the phone itself.
 - **Pin your categories** to the home screen.
+- **The discussion forums, readable.** Whole threads on one screen, indented only where the
+  conversation branches, with branches you can fold.
 - **Works anywhere craigslist does**, in fifteen languages.
 - **Private.** No Corkboard server, no tracking, no account.
 
